@@ -1,6 +1,0 @@
-{
-  "name": "AZLive",
-  "description": "A live-shopping operations system for online sellers to manage stocks, live orders, customer confirmation, and delivery fulfillment.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
