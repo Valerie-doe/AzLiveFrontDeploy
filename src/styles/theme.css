@@ -1,0 +1,25 @@
+:root{
+  --color-primary: #ffffff;
+  --color-secondary: #592F87;
+  --color-accent: #EEB926;
+}
+
+/* Utility classes for quick swaps */
+.bg-primary{background-color:var(--color-primary) !important}
+.text-primary{color:var(--color-primary) !important}
+.border-primary{border-color:var(--color-primary) !important}
+
+.bg-secondary{background-color:var(--color-secondary) !important}
+.text-secondary{color:var(--color-secondary) !important}
+.border-secondary{border-color:var(--color-secondary) !important}
+
+.bg-accent{background-color:var(--color-accent) !important}
+.text-accent{color:var(--color-accent) !important}
+.border-accent{border-color:var(--color-accent) !important}
+
+/* small helpers */
+.shadow-secondary{box-shadow:0 4px 10px rgba(89,47,135,0.12)}
+
+/* Ensure buttons using default bg/text can be themed */
+.btn-primary{background-color:var(--color-secondary);color:var(--color-primary)}
+.btn-accent{background-color:var(--color-accent);color:#000}

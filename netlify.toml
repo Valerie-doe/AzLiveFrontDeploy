@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA : toutes les routes renvoient index.html (React gère le routage côté client)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
