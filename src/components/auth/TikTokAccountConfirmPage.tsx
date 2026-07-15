@@ -8,12 +8,14 @@ import { TikTokAuthSession, PendingTikTokAuth } from '../../features/auth/types/
 import {
   buildTikTokSession,
   formatTikTokAccountLabel,
+  isValidTikTokUniqueId,
 } from '../../features/auth/services/tiktokAuth.service';
 import {
   clearPendingTikTokAuth,
   getPendingTikTokAuth,
   saveTikTokSession,
 } from '../../features/auth/services/authStorage';
+import { setVendeurTikTokUsername } from '../../api/vendeurs.api';
 
 interface TikTokAccountConfirmPageProps {
   onLoginSuccess: (session: TikTokAuthSession) => void;
@@ -24,6 +26,8 @@ export default function TikTokAccountConfirmPage({
 }: TikTokAccountConfirmPageProps) {
   const [pendingAuth, setPendingAuth] = useState<PendingTikTokAuth | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [manualHandle, setManualHandle] = useState('');
+  const [needsHandle, setNeedsHandle] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
@@ -35,8 +39,15 @@ export default function TikTokAccountConfirmPage({
       return;
     }
 
-    if (!pending.profile.username) {
+    if (!pending.tiktokConnected && !pending.profile.username) {
       setErrorMessage('Aucun compte TikTok n\'a pu être récupéré pour cette session.');
+      return;
+    }
+
+    // OAuth OK mais TikTok n'a pas renvoyé de @ valide → demander le unique_id.
+    if (!isValidTikTokUniqueId(pending.profile.username)) {
+      setPendingAuth(pending);
+      setNeedsHandle(true);
       return;
     }
 
@@ -45,18 +56,51 @@ export default function TikTokAccountConfirmPage({
     setSelectedAccount(accountLabel);
   }, []);
 
-  const handleConfirmSelection = () => {
-    if (!pendingAuth || !selectedAccount) return;
+  const handleConfirmSelection = async () => {
+    if (!pendingAuth) return;
 
     setIsSaving(true);
+    setErrorMessage(null);
 
-    const session = buildTikTokSession(pendingAuth);
-    saveTikTokSession(session);
-    clearPendingTikTokAuth();
+    try {
+      let nextPending = pendingAuth;
 
-    playNotificationSound('confirm');
-    window.history.replaceState({}, '', '/');
-    onLoginSuccess(session);
+      if (needsHandle || !isValidTikTokUniqueId(pendingAuth.profile.username)) {
+        const handle = manualHandle.trim().replace(/^@+/, '');
+        if (!isValidTikTokUniqueId(handle)) {
+          setErrorMessage(
+            'Indiquez votre @TikTok (ex. azplus.mg), pas le nom d\'affichage avec emoji.',
+          );
+          setIsSaving(false);
+          return;
+        }
+        const updated = await setVendeurTikTokUsername(pendingAuth.vendeur.id, handle);
+        const username = (updated.tiktok_username as string) || `@${handle}`;
+        nextPending = {
+          ...pendingAuth,
+          vendeur: { ...pendingAuth.vendeur, tiktok_username: username },
+          profile: {
+            ...pendingAuth.profile,
+            username,
+          },
+        };
+      }
+
+      if (!selectedAccount && !needsHandle) return;
+
+      const session = buildTikTokSession(nextPending);
+      saveTikTokSession(session);
+      clearPendingTikTokAuth();
+
+      playNotificationSound('confirm');
+      window.history.replaceState({}, '', '/');
+      onLoginSuccess(session);
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Impossible d\'enregistrer le @TikTok.',
+      );
+      setIsSaving(false);
+    }
   };
 
   const accountLabel = pendingAuth ? formatTikTokAccountLabel(pendingAuth.profile) : null;
@@ -75,7 +119,7 @@ export default function TikTokAccountConfirmPage({
           </div>
 
           <AnimatePresence mode="wait">
-            {errorMessage ? (
+            {errorMessage && !pendingAuth ? (
               <div className="p-8 text-center space-y-4">
                 <p className="text-rose-600 text-xs font-bold">{errorMessage}</p>
                 <button
@@ -88,6 +132,59 @@ export default function TikTokAccountConfirmPage({
                 >
                   Retour à la connexion
                 </button>
+              </div>
+            ) : needsHandle && pendingAuth ? (
+              <div className="p-8 space-y-5">
+                <div className="space-y-2">
+                  <h2 className="text-lg font-bold text-slate-900">Votre @TikTok est requis</h2>
+                  <p className="text-sm text-slate-500">
+                    Connexion TikTok OK pour <strong>{pendingAuth.profile.displayName}</strong>,
+                    mais TikTok n&apos;a pas fourni le handle technique. Sans ce @, AZLive ne peut
+                    pas détecter vos lives.
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Ouvrez votre profil TikTok : le @ est dans l&apos;URL (ex.{' '}
+                    <code className="bg-slate-100 px-1 rounded">tiktok.com/@azplus.mg</code>).
+                  </p>
+                </div>
+                <label className="block space-y-2">
+                  <span className="text-xs font-bold text-slate-700">@TikTok (unique_id)</span>
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <span className="text-slate-400 font-mono">@</span>
+                    <input
+                      value={manualHandle}
+                      onChange={(e) => setManualHandle(e.target.value.replace(/^@+/, ''))}
+                      placeholder="azplus.mg"
+                      className="w-full bg-transparent border-none outline-none text-sm font-mono text-slate-800"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                </label>
+                {errorMessage ? (
+                  <p className="text-rose-600 text-xs font-bold">{errorMessage}</p>
+                ) : null}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearPendingTikTokAuth();
+                      window.history.replaceState({}, '', '/');
+                      window.location.reload();
+                    }}
+                    className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer border-none"
+                  >
+                    Retour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleConfirmSelection()}
+                    disabled={isSaving || !manualHandle.trim()}
+                    className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl cursor-pointer border-none"
+                  >
+                    {isSaving ? 'Enregistrement…' : 'Confirmer et accéder'}
+                  </button>
+                </div>
               </div>
             ) : !pendingAuth || !accountLabel ? (
               <div className="p-8 text-center text-slate-400 text-xs">
@@ -109,7 +206,7 @@ export default function TikTokAccountConfirmPage({
                   window.history.replaceState({}, '', '/');
                   window.location.reload();
                 }}
-                onConfirm={handleConfirmSelection}
+                onConfirm={() => void handleConfirmSelection()}
                 confirmDisabled={!selectedAccount || isSaving}
               />
             )}

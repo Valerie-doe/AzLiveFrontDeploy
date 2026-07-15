@@ -8,7 +8,9 @@ import {
 
 export function buildTikTokProfileFromAuthMe(authMe: AuthMeResponse): TikTokProfile {
   const vendeur = authMe.vendeur;
-  const username = vendeur?.tiktok_username || authMe.user.username;
+  // Ne jamais retomber sur authMe.user.username (souvent tt_<open_id>) :
+  // ce n'est pas un @TikTok utilisable pour TikTools.
+  const username = vendeur?.tiktok_username || '';
 
   return {
     openId: null,
@@ -17,6 +19,13 @@ export function buildTikTokProfileFromAuthMe(authMe: AuthMeResponse): TikTokProf
     avatarUrl: null,
     unionId: null,
   };
+}
+
+/** True si value est un unique_id TikTok (ex. azplus.mg), pas un display name. */
+export function isValidTikTokUniqueId(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const normalized = value.trim().replace(/^@+/, '').toLowerCase();
+  return /^[a-z0-9._-]+$/.test(normalized);
 }
 
 export function buildPendingTikTokAuth(params: {

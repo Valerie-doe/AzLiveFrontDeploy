@@ -19,6 +19,7 @@ export interface AzLiveVendeur {
   contact?: string;
   facebook_page_id?: string | null;
   facebook_page_name?: string | null;
+  tiktok_username?: string | null;
   is_demo_mode?: boolean;
   pages_facebook?: FacebookPageOption[];
 }
