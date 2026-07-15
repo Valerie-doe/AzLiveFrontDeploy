@@ -19,9 +19,10 @@ export function useProducts(enabled = true) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProducts = useCallback(async () => {
+  const loadProducts = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = Boolean(opts?.silent);
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
 
       const response = await fetchProducts();
@@ -34,13 +35,14 @@ export function useProducts(enabled = true) {
     } catch (e: any) {
       setError(e.message || "Erreur inconnue");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (!enabled) return;
     loadProducts();
+    // Pas de polling : charge au montage / après mutative (add/update/delete).
   }, [enabled, loadProducts]);
 
   const addProduct = async (product: Omit<Product, "id">) => {
@@ -48,27 +50,34 @@ export function useProducts(enabled = true) {
       const created = await createProduct(product);
       const newProduct = mapProductFromApi(created);
       setProducts((prev) => [...prev, newProduct]);
+      return newProduct;
     } catch (e: any) {
-      console.error(e.message);
+      const message = e?.message || "Erreur création produit";
+      setError(message);
+      throw e instanceof Error ? e : new Error(message);
     }
   };
 
   const editProduct = async (id: string, updates: Partial<Product>) => {
     try {
       const existing = products.find((p) => p.id === id);
-      const payload = {
-        ...existing,
-        ...updates,
+      const payload: Partial<Product> = {
+        name: updates.name ?? existing?.name,
+        image: updates.image ?? existing?.image,
+        images: updates.images ?? existing?.images ?? [],
+        vendeur_id: updates.vendeur_id ?? existing?.vendeur_id,
         variants: updates.variants ?? existing?.variants ?? [],
       };
       const updated = await updateProduct(id, payload);
       const mapped = mapProductFromApi(updated);
 
-      setProducts((prev) =>
-        prev.map((p) => (p.id === id ? mapped : p))
-      );
+      setProducts((prev) => prev.map((p) => (p.id === id ? mapped : p)));
+      return mapped;
     } catch (e: any) {
-      console.error(e.message);
+      const message = e?.message || "Erreur modification produit";
+      setError(message);
+      console.error(message);
+      throw e instanceof Error ? e : new Error(message);
     }
   };
 

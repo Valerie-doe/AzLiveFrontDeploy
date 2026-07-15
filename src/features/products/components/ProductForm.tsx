@@ -9,7 +9,7 @@ interface ProductFormProps {
   products: Product[];
   productToEdit: Product | null;
   onCancel: () => void;
-  onSave: (payload: Omit<Product, 'id'>) => void;
+  onSave: (payload: Omit<Product, 'id'>) => void | Promise<void>;
 }
 
 export default function ProductForm({
@@ -35,7 +35,9 @@ export default function ProductForm({
   const [newVarStock, setNewVarStock] = useState<number>(10);
   const [newVarPrixUnitaire, setNewVarPrixUnitaire] = useState<number>(0);
 
-  // Initialize form states
+  // Initialise le formulaire uniquement à l'ouverture / changement de produit édité.
+  // Ne pas dépendre de `products` : le polling stock (~10s) recrée le tableau et
+  // réinitialisait le nom / les variantes en cours de saisie.
   useEffect(() => {
     if (productToEdit) {
       setName(productToEdit.name);
@@ -49,7 +51,9 @@ export default function ProductForm({
       setImageFiles([]);
       setNewImagePreviews([]);
       if (productToEdit.variants && productToEdit.variants.length > 0) {
-        setUseVariants(productToEdit.variants.length > 1);
+        // Toujours afficher la gestion par variantes à l'édition (y compris 1 seule),
+        // pour préserver les IDs backend et ajuster le stock correctement.
+        setUseVariants(true);
         setFormVariants(productToEdit.variants.map((v) => ({
           id: v.id,
           size: v.size,
@@ -91,7 +95,8 @@ export default function ProductForm({
     setNewVarColor('');
     setNewVarStock(10);
     setNewVarPrixUnitaire(0);
-  }, [productToEdit, products]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- init volontairement borné à l'id édité
+  }, [productToEdit?.id]);
  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -134,8 +139,10 @@ export default function ProductForm({
         alert('Veuillez remplir un code JP valide (e.g. JP1) et un prix unitaire positif.');
         return;
       }
+      // Préserver l'id de variante existante pour PATCH (sinon le backend
+      // recrée/supprime et casse sur la contrainte taille+couleur).
       finalVariants = [{
-        id: `var-${Date.now()}`,
+        id: productToEdit?.variants?.[0]?.id || `var-${Date.now()}`,
         size: size.trim() || 'Freesize',
         color: color.trim() || 'Unique',
         stock: Number(stock),
@@ -170,7 +177,11 @@ export default function ProductForm({
       })),
     };
 
-    onSave(payload);
+    try {
+      await onSave(payload);
+    } catch {
+      // Erreur déjà affichée par ProductPage / hook.
+    }
   };
 
   return (
@@ -378,7 +389,18 @@ export default function ProductForm({
                                 >
                                   -
                                 </button>
-                                <span className="w-5 font-black text-slate-900 text-center text-xs">{v.stock}</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={v.stock}
+                                  onChange={(e) => {
+                                    const next = Math.max(0, Number(e.target.value) || 0);
+                                    setFormVariants(formVariants.map((fv) =>
+                                      fv.id === v.id ? { ...fv, stock: next } : fv,
+                                    ));
+                                  }}
+                                  className="w-12 h-6 text-center font-black text-slate-900 text-xs border border-slate-200 rounded bg-white"
+                                />
                                 <button
                                   type="button"
                                   onClick={() => {

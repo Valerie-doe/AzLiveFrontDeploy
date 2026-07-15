@@ -83,11 +83,18 @@ export function mapImagesToApi(images: ProductImage[] = []) {
 }
 
 export function mapVariantToApi(variant: Partial<ProductVariant>) {
+  const numericId = variant.id != null ? Number(variant.id) : NaN;
+  const keepId =
+    variant.id != null &&
+    !String(variant.id).startsWith('var-') &&
+    !Number.isNaN(numericId) &&
+    numericId > 0;
+
   return {
-    ...(variant.id && !variant.id.startsWith('var-') ? { id: Number(variant.id) } : {}),
+    ...(keepId ? { id: numericId } : {}),
     taille: variant.size,
     couleur: variant.color,
-    stock: variant.stock,
+    stock: Number(variant.stock) || 0,
     prix_unitaire: variant.prixUnitaire,
     code_jp: variant.jpCode,
   };

@@ -110,4 +110,8 @@ export interface LiveSession {
   revenue: number;
   orders: Order[];
   broadcast?: LiveBroadcastBridge | null;
+  /** Lien formulaire de confirmation (généré côté backend dès détection live). */
+  confirmationLink?: string;
+  /** Texte prêt à coller/épingler manuellement dans le chat TikTok. */
+  confirmationComment?: string;
 }

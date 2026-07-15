@@ -53,6 +53,8 @@ export function mapLiveFromApi(api: LiveApiResponse): LiveSession {
     revenue: api.chiffre_affaires ?? 0,
     orders: [],
     broadcast: mapBroadcastFromApi(api),
+    confirmationLink: api.confirmation_link || undefined,
+    confirmationComment: api.confirmation_comment || undefined,
   };
 }
 

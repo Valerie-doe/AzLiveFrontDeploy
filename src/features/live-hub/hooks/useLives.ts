@@ -44,11 +44,12 @@ export function useLives(enabled = true) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadLives = useCallback(async () => {
+  const loadLives = useCallback(async (opts?: { sync?: boolean }) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchLives();
+      const vendeurId = getStoredVendeurId();
+      const data = await fetchLives(vendeurId, { sync: Boolean(opts?.sync) });
       setLiveSessions(data.map(mapLiveFromApi));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur chargement des lives');
@@ -70,7 +71,8 @@ export function useLives(enabled = true) {
 
   useEffect(() => {
     if (!enabled) return;
-    loadLives();
+    // sync=1 démarre les scouts WS (0 appels REST TikTools).
+    loadLives({ sync: true });
     loadFacebookPages();
   }, [enabled, loadLives, loadFacebookPages]);
 

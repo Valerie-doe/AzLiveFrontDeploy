@@ -22,6 +22,7 @@ import FacebookCallbackPage from './components/auth/FacebookCallbackPage';
 import FacebookPagesSelectionPage from './components/auth/FacebookPagesSelectionPage';
 import TikTokCallbackPage from './components/auth/TikTokCallbackPage';
 import TikTokAccountConfirmPage from './components/auth/TikTokAccountConfirmPage';
+import PublicOrderFormPage from './components/public/PublicOrderFormPage';
 import LiveShoppingHub from './features/live-hub';
 import ProductManagement from './features/products';
 import ClientsView from './features/clients';
@@ -39,6 +40,12 @@ function getAuthRoute(): 'facebook-callback' | 'facebook-pages' | 'tiktok-callba
   return null;
 }
 
+// Page publique de commande (lien partagé aux clients TikTok) : /commander/<liveId>
+function getPublicOrderLiveId(): number | null {
+  const match = window.location.pathname.replace(/\/$/, '').match(/^\/commander\/(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
 export default function App() {
   const state = useAppState();
   // Les données métier ne sont chargées qu'une fois authentifié : la bascule
@@ -48,6 +55,7 @@ export default function App() {
   const liveState = useLives(state.isAuthenticated);
   const collaboratorState = useCollaborators(state.isAuthenticated);
   const authRoute = getAuthRoute();
+  const publicOrderLiveId = getPublicOrderLiveId();
 
   useEffect(() => {
     if (!isStoredAuthenticated() || !hasRealAuthToken()) return;
@@ -59,6 +67,10 @@ export default function App() {
         state.setIsAuthenticated(false);
       });
   }, [state.setIsAuthenticated]);
+
+  if (publicOrderLiveId !== null) {
+    return <PublicOrderFormPage liveId={publicOrderLiveId} />;
+  }
 
   if (authRoute === 'facebook-callback') {
     return <FacebookCallbackPage />;

@@ -248,7 +248,16 @@ export default function LiveShoppingHubPage({
   const handleAddToDressing = async (sessionId: string, productIds: string[]) => {
     const session = ownedLiveSessions.find((s) => s.id === sessionId);
     if (!session) return;
-    const merged = [...new Set([...(session.selectedProductIds || []), ...productIds])];
+    const eligibleIds = productIds.filter((id) => {
+      const product = products.find((p) => p.id === id);
+      if (!product) return false;
+      return product.variants.reduce((sum, v) => sum + v.stock, 0) >= 1;
+    });
+    if (eligibleIds.length === 0) {
+      alert('Impossible d’ajouter : le stock restant doit être au moins 1.');
+      return;
+    }
+    const merged = [...new Set([...(session.selectedProductIds || []), ...eligibleIds])];
     await onUpdateLiveDressing(sessionId, merged);
   };
 

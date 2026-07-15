@@ -44,8 +44,14 @@ export default function LiveStockTab({
   // Live terminé : consultation autorisée, mais aucune modification du dressing.
   const isTerminated = selectedSession.status === 'Terminé';
 
+  const canAddToDressing = (p: Product) => getProductStock(p) >= 1;
+
   const handleRowClick = (p: Product, isAlreadyInDressing: boolean) => {
     if (isTerminated || isAlreadyInDressing) return;
+    if (!canAddToDressing(p)) {
+      playNotificationSound('click');
+      return;
+    }
     const isChecked = selectedStockProductIds.includes(p.id);
     if (isChecked) {
       setSelectedStockProductIds((prev) => prev.filter((id) => id !== p.id));
@@ -61,9 +67,13 @@ export default function LiveStockTab({
   };
 
   const handleAddToDressing = async () => {
-    if (selectedStockProductIds.length === 0) return;
+    const eligibleIds = selectedStockProductIds.filter((id) => {
+      const prod = products.find((p) => p.id === id);
+      return prod ? canAddToDressing(prod) : false;
+    });
+    if (eligibleIds.length === 0) return;
     try {
-      await onAddToDressing(selectedSession.id, selectedStockProductIds);
+      await onAddToDressing(selectedSession.id, eligibleIds);
       playNotificationSound('confirm');
       setSelectedStockProductIds([]);
       onTabChange('products');
@@ -114,17 +124,27 @@ export default function LiveStockTab({
               ) : (
                 filteredStock.map((p) => {
                   const display = getProductDisplay(p);
+                  const stockRestant = getProductStock(p);
+                  const outOfStock = stockRestant < 1;
                   const isAlreadyInDressing =
                     selectedSession.selectedProductIds?.includes(p.id) || false;
                   const isChecked = selectedStockProductIds.includes(p.id);
+                  const rowDisabled = isTerminated || isAlreadyInDressing || outOfStock;
 
                   return (
                     <tr
                       key={p.id}
-                      className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${
-                        isChecked ? 'bg-indigo-50/10' : ''
-                      } ${isAlreadyInDressing ? 'opacity-80 bg-slate-50/30' : ''}`}
+                      className={`hover:bg-slate-50/50 transition-colors ${
+                        rowDisabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                      } ${isChecked ? 'bg-indigo-50/10' : ''} ${
+                        isAlreadyInDressing || outOfStock ? 'opacity-80 bg-slate-50/30' : ''
+                      }`}
                       onClick={() => handleRowClick(p, isAlreadyInDressing)}
+                      title={
+                        outOfStock && !isAlreadyInDressing
+                          ? 'Stock restant insuffisant (minimum 1 pour ajouter au dressing)'
+                          : undefined
+                      }
                     >
                       <td className="py-3.5 px-5 text-center" onClick={(e) => e.stopPropagation()}>
                         {isAlreadyInDressing ? (
@@ -135,10 +155,12 @@ export default function LiveStockTab({
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            disabled={isTerminated}
+                            disabled={isTerminated || outOfStock}
                             onChange={() => handleRowClick(p, isAlreadyInDressing)}
                             className={`h-4 w-4 border-slate-355 border-slate-300 text-indigo-600 rounded focus:ring-indigo-500 ${
-                              isTerminated ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                              isTerminated || outOfStock
+                                ? 'cursor-not-allowed opacity-50'
+                                : 'cursor-pointer'
                             }`}
                           />
                         )}
@@ -152,15 +174,18 @@ export default function LiveStockTab({
                         <div className="font-extrabold text-slate-900">{p.name}</div>
                         <div className="text-[10px] text-slate-400 font-mono">
                           {display.size} {display.color ? `• ${display.color}` : ''}
+                          {outOfStock && !isAlreadyInDressing ? (
+                            <span className="ml-1.5 text-rose-500 font-bold">• Stock épuisé</span>
+                          ) : null}
                         </div>
                       </td>
                       <td className="py-3.5 px-5 text-center">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                            getProductStock(p) === 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                            outOfStock ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
-                          {getProductStock(p)} restant{getProductStock(p) > 1 ? 's' : ''}
+                          {stockRestant} restant{stockRestant > 1 ? 's' : ''}
                         </span>
                       </td>
                       <td className="py-3.5 px-5 text-right font-black text-indigo-600 font-sans">

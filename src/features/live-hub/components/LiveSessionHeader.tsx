@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Printer, Link2, Check } from 'lucide-react';
 import { LiveSession } from '../../../types';
 import { playNotificationSound } from '../../../sound';
 import { formatLiveDate } from '../utils/dateUtils';
@@ -35,6 +35,27 @@ export default function LiveSessionHeader({
   const handlePrintClick = () => {
     onPrintTickets();
     playNotificationSound('click');
+  };
+
+  const [linkCopied, setLinkCopied] = useState(false);
+  const orderFormUrl =
+    selectedSession.confirmationLink ||
+    `${window.location.origin}/commander/${selectedSession.id}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(orderFormUrl);
+    } catch {
+      const temp = document.createElement('textarea');
+      temp.value = orderFormUrl;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+    }
+    setLinkCopied(true);
+    playNotificationSound('click');
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   return (
@@ -77,32 +98,52 @@ export default function LiveSessionHeader({
       </div>
 
       {/* Action buttons depending on live state */}
-      {selectedSession.status === 'Créé' && (
-        <button
-          onClick={handleStartClick}
-          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-705 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer shadow-md border-none"
-        >
-          Lancer le Live 🚀
-        </button>
-      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        {selectedSession.status !== 'Terminé' && (
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            title="Copier le lien de confirmation"
+            className={`max-w-full px-3 py-2 rounded-xl text-[11px] font-mono transition-all cursor-pointer flex items-center gap-2 border ${
+              linkCopied
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            {linkCopied ? <Check className="h-3.5 w-3.5 shrink-0" /> : <Link2 className="h-3.5 w-3.5 shrink-0" />}
+            <span className="truncate max-w-[220px] sm:max-w-[320px]">
+              {linkCopied ? 'Lien copié !' : orderFormUrl}
+            </span>
+          </button>
+        )}
 
-      {selectedSession.status === 'En cours' && (
-        <button
-          onClick={handleCloseClick}
-          className="px-5 py-2.5 bg-red-650 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer border-none"
-        >
-          Clôturer le Live & Archiver Ventes
-        </button>
-      )}
+        {selectedSession.status === 'Créé' && (
+          <button
+            onClick={handleStartClick}
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-705 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer shadow-md border-none"
+          >
+            Lancer le Live 🚀
+          </button>
+        )}
 
-      {selectedSession.status === 'Terminé' && (
-        <button
-          onClick={handlePrintClick}
-          className="px-5 py-2.5 bg-secondary bg-indigo-600 hover:bg-indigo-705 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer flex items-center gap-2 shadow-sm border-none"
-        >
-          <Printer className="h-4 w-4" /> Imprimer tickets produits
-        </button>
-      )}
+        {selectedSession.status === 'En cours' && (
+          <button
+            onClick={handleCloseClick}
+            className="px-5 py-2.5 bg-red-650 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer border-none"
+          >
+            Clôturer le Live & Archiver Ventes
+          </button>
+        )}
+
+        {selectedSession.status === 'Terminé' && (
+          <button
+            onClick={handlePrintClick}
+            className="px-5 py-2.5 bg-secondary bg-indigo-600 hover:bg-indigo-705 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer flex items-center gap-2 shadow-sm border-none"
+          >
+            <Printer className="h-4 w-4" /> Imprimer tickets produits
+          </button>
+        )}
+      </div>
     </div>
   );
 }

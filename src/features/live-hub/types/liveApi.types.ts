@@ -40,6 +40,8 @@ export interface LiveApiResponse {
   produits_dressing: LiveApiProduct[];
   chiffre_affaires: number;
   nb_fiches: number;
+  confirmation_link?: string | null;
+  confirmation_comment?: string | null;
   diffusion_plateformes?: LiveDiffusionApi | null;
 }
 

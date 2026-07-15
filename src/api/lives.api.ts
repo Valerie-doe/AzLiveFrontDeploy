@@ -1,8 +1,20 @@
 import { apiRequest, fetchPaginated, getJsonHeaders } from './client';
 import { LiveApiResponse, LiveWritePayload } from '../features/live-hub/types/liveApi.types';
 
-export async function fetchLives(): Promise<LiveApiResponse[]> {
-  return fetchPaginated<LiveApiResponse>('lives/');
+export async function fetchLives(
+  vendeurId?: string | number | null,
+  opts?: { sync?: boolean },
+): Promise<LiveApiResponse[]> {
+  const params = new URLSearchParams();
+  if (vendeurId != null && vendeurId !== '') {
+    params.set('vendeur_id', String(vendeurId));
+  }
+  // Sync TikTools uniquement sur demande explicite (F5 / refresh hub), pas en poll.
+  if (opts?.sync) {
+    params.set('sync', '1');
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return fetchPaginated<LiveApiResponse>(`lives/${query}`);
 }
 
 export async function fetchLiveById(id: string | number): Promise<LiveApiResponse> {

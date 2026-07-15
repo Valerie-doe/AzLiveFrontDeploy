@@ -21,17 +21,30 @@ interface LiveOrdersTabProps {
   onAddManualOrder: () => void;
 }
 
-type OrdersSubTab = 'pending' | 'confirmed';
+type OrdersSubTab = 'pending' | 'confirmed' | 'cancelled';
 
 /** Commande détectée mais pas encore confirmée. */
 const PENDING_STATUS: OrderStatus = 'JP capturé';
 /** Statuts considérés comme « confirmés » (confirmation et étapes ultérieures). */
 const CONFIRMED_STATUSES: OrderStatus[] = ['confirmé', 'préparé', 'en livraison', 'livré'];
+/** Commande annulée (par le client ou le vendeur). */
+const CANCELLED_STATUS: OrderStatus = 'annulé';
 
 const ITEMS_PER_PAGE = 10;
 
 function chronoKey(order: Order): string {
   return order.orderDateTime || order.orderTime || '';
+}
+
+/** Clé stable pour regrouper les commandes d'un même client. */
+function clientGroupKey(order: Order): string {
+  const fb = (order.facebookId || '').trim();
+  if (fb) return `fb:${fb}`;
+  const handle = (order.customerHandle || '').trim().toLowerCase();
+  if (handle) return `h:${handle}`;
+  const phone = (order.customerPhone || '').trim();
+  const name = (order.customerName || '').trim().toLowerCase();
+  return `n:${name}|${phone}`;
 }
 
 function getInitials(name: string): string {
@@ -154,17 +167,40 @@ export default function LiveOrdersTab({
     [sessionOrders, sessionOrdersSearch],
   );
 
-  // Commandes confirmées : toutes les infos disponibles, plus récentes en premier.
+  const sortByClientThenOrder = (a: Order, b: Order) => {
+    const byClient = clientGroupKey(a).localeCompare(clientGroupKey(b), 'fr');
+    if (byClient !== 0) return byClient;
+    const byChrono = chronoKey(a).localeCompare(chronoKey(b));
+    if (byChrono !== 0) return byChrono;
+    return Number(a.id) - Number(b.id);
+  };
+
+  // Commandes confirmées : groupées par client, commandes en ordre croissant (plus anciennes d'abord).
   const confirmedOrders = useMemo(
     () =>
       sessionOrders
         .filter((o) => CONFIRMED_STATUSES.includes(o.status) && matchesSearch(o))
-        .sort((a, b) => chronoKey(b).localeCompare(chronoKey(a))),
+        .sort(sortByClientThenOrder),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sessionOrders, sessionOrdersSearch],
   );
 
-  const activeList = ordersSubTab === 'pending' ? pendingOrders : confirmedOrders;
+  // Commandes annulées : même regroupement client / ordre croissant.
+  const cancelledOrders = useMemo(
+    () =>
+      sessionOrders
+        .filter((o) => o.status === CANCELLED_STATUS && matchesSearch(o))
+        .sort(sortByClientThenOrder),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessionOrders, sessionOrdersSearch],
+  );
+
+  const activeList =
+    ordersSubTab === 'pending'
+      ? pendingOrders
+      : ordersSubTab === 'cancelled'
+        ? cancelledOrders
+        : confirmedOrders;
 
   const totalPages = Math.ceil(activeList.length / ITEMS_PER_PAGE);
   const activePage = Math.min(ordersPage, Math.max(1, totalPages));
@@ -224,8 +260,6 @@ export default function LiveOrdersTab({
       const span = group.length;
 
       group.forEach((ord, idx) => {
-        const qty = ord.quantity ?? 1;
-        const total = (ord.price || 0) * qty;
         const isSelected = selectedOrder?.id === ord.id;
         rows.push(
           <tr
@@ -261,10 +295,6 @@ export default function LiveOrdersTab({
             <td className="py-3.5 px-5 text-right font-medium text-slate-600 whitespace-nowrap">
               {(ord.price || 0).toLocaleString()} {ord.currency || 'Ar'}
             </td>
-            <td className="py-3.5 px-5 text-center font-bold text-slate-700">{qty}</td>
-            <td className="py-3.5 px-5 text-right font-black text-indigo-600 font-sans whitespace-nowrap">
-              {total.toLocaleString()} {ord.currency || 'Ar'}
-            </td>
             <td className="py-3.5 px-5 text-center" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
@@ -288,84 +318,125 @@ export default function LiveOrdersTab({
     return rows;
   };
 
-  // Lignes du tableau « confirmées » : toutes les infos exposées par l'API.
-  const renderConfirmedRows = () =>
-    displayedOrders.map((ord) => {
-      const qty = ord.quantity ?? 1;
-      const total = (ord.price || 0) * qty;
-      const isSelected = selectedOrder?.id === ord.id;
-      return (
-        <tr
-          key={ord.id}
-          className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${
-            isSelected ? 'bg-indigo-50/20 font-bold' : ''
-          }`}
-          onClick={() => {
-            setSelectedCompletedOrderId(ord.id);
-            playNotificationSound('click');
-          }}
-        >
-          <td className="py-3.5 px-5">
-            <div className="flex items-center gap-2.5">
-              <ClientAvatar order={ord} />
-              <div className="min-w-0">
-                <div className="font-extrabold text-slate-900 truncate">{ord.customerName}</div>
-                <div className="text-[10px] text-slate-400 font-mono truncate">
-                  FB : {ord.facebookId || '—'}
+  // Lignes détaillées (confirmées / annulées) : regroupement par client via rowSpan.
+  const renderDetailRows = () => {
+    const rows: React.ReactNode[] = [];
+    let i = 0;
+
+    while (i < displayedOrders.length) {
+      const key = clientGroupKey(displayedOrders[i]);
+      let j = i;
+      while (j < displayedOrders.length && clientGroupKey(displayedOrders[j]) === key) j++;
+      const group = displayedOrders.slice(i, j);
+      const span = group.length;
+
+      group.forEach((ord, idx) => {
+        const qty = ord.quantity && ord.quantity > 0 ? ord.quantity : 1;
+        const total = (ord.price || 0) * qty;
+        const isSelected = selectedOrder?.id === ord.id;
+        rows.push(
+          <tr
+            key={ord.id}
+            className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${
+              isSelected ? 'bg-indigo-50/20 font-bold' : ''
+            }`}
+            onClick={() => {
+              setSelectedCompletedOrderId(ord.id);
+              playNotificationSound('click');
+            }}
+          >
+            {idx === 0 && (
+              <td
+                rowSpan={span}
+                className="py-3.5 px-5 align-top border-r border-slate-100 bg-slate-50/30"
+              >
+                <div className="flex items-center gap-2.5">
+                  <ClientAvatar order={group[0]} />
+                  <div className="min-w-0">
+                    <div className="font-extrabold text-slate-900 truncate">
+                      {group[0].customerName}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono truncate">
+                      FB : {group[0].facebookId || '—'}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </td>
-          <td className="py-3.5 px-5">
-            <span className="font-mono text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded font-black">
-              {ord.jpCode || '—'}
-            </span>
-          </td>
-          <td className="py-3.5 px-5 text-slate-700 font-medium whitespace-nowrap">{ord.productName}</td>
-          <td className="py-3.5 px-5 text-center font-bold text-slate-700">{qty}</td>
-          <td className="py-3.5 px-5 text-right font-medium text-slate-600 whitespace-nowrap">
-            {(ord.price || 0).toLocaleString()} {ord.currency || 'Ar'}
-          </td>
-          <td className="py-3.5 px-5 text-right font-black text-indigo-600 font-sans whitespace-nowrap">
-            {total.toLocaleString()} {ord.currency || 'Ar'}
-          </td>
-          <td className="py-3.5 px-5 font-mono text-slate-500 whitespace-nowrap">{formatDateTime(ord)}</td>
-          <td className="py-3.5 px-5 text-center">
-            <span
-              className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded-full border ${getStatusBadgeClass(
-                ord.status,
-              )}`}
+              </td>
+            )}
+            <td className="py-3.5 px-5">
+              <span className="font-mono text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded font-black">
+                {ord.jpCode || '—'}
+              </span>
+            </td>
+            <td className="py-3.5 px-5 text-slate-700 font-medium whitespace-nowrap">
+              {ord.productName}
+            </td>
+            <td className="py-3.5 px-5 text-center font-bold text-slate-700">{qty}</td>
+            <td className="py-3.5 px-5 text-right font-medium text-slate-600 whitespace-nowrap">
+              {(ord.price || 0).toLocaleString()} {ord.currency || 'Ar'}
+            </td>
+            <td className="py-3.5 px-5 text-right font-black text-indigo-600 font-sans whitespace-nowrap">
+              {total.toLocaleString()} {ord.currency || 'Ar'}
+            </td>
+            <td className="py-3.5 px-5 font-mono text-slate-500 whitespace-nowrap">
+              {formatDateTime(ord)}
+            </td>
+            <td className="py-3.5 px-5 text-center">
+              <span
+                className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded-full border ${getStatusBadgeClass(
+                  ord.status,
+                )}`}
+              >
+                {ord.status}
+              </span>
+            </td>
+            <td
+              className="py-3.5 px-5 text-slate-600 max-w-[200px] truncate"
+              title={ord.deliveryAddress || ''}
             >
-              {ord.status}
-            </span>
-          </td>
-          <td className="py-3.5 px-5 text-slate-600 max-w-[200px] truncate" title={ord.deliveryAddress || ''}>
-            {ord.deliveryAddress || '—'}
-          </td>
-          <td className="py-3.5 px-5 font-mono text-slate-500 whitespace-nowrap">{ord.customerPhone || '—'}</td>
-        </tr>
-      );
-    });
+              {ord.deliveryAddress || '—'}
+            </td>
+            <td className="py-3.5 px-5 font-mono text-slate-500 whitespace-nowrap">
+              {ord.customerPhone || '—'}
+            </td>
+          </tr>,
+        );
+      });
+
+      i = j;
+    }
+
+    return rows;
+  };
 
   const headerTitle =
     ordersSubTab === 'pending'
       ? `Commandes en attente (${pendingOrders.length})`
-      : `Commandes confirmées (${confirmedOrders.length})`;
+      : ordersSubTab === 'cancelled'
+        ? `Commandes annulées (${cancelledOrders.length})`
+        : `Commandes confirmées (${confirmedOrders.length})`;
 
   const emptyLabel =
     ordersSubTab === 'pending'
       ? 'Aucune commande en attente pour ce live.'
-      : 'Aucune commande confirmée pour ce live.';
+      : ordersSubTab === 'cancelled'
+        ? 'Aucune commande annulée pour ce live.'
+        : 'Aucune commande confirmée pour ce live.';
+
+  const showDetailTable = ordersSubTab === 'confirmed' || ordersSubTab === 'cancelled';
 
   return (
     <div className="space-y-4">
       {/* SUB-TAB NAVIGATION (même principe que Stock / Tous les articles - Dressing) */}
-      <div className="flex border-b border-slate-200" id="live-orders-subtabs">
+      <div className="flex border-b border-slate-200 overflow-x-auto" id="live-orders-subtabs">
         <button type="button" onClick={() => switchSubTab('pending')} className={subTabClass('pending')}>
           Commandes en attente ({pendingOrders.length})
         </button>
         <button type="button" onClick={() => switchSubTab('confirmed')} className={subTabClass('confirmed')}>
           Commandes confirmées ({confirmedOrders.length})
+        </button>
+        <button type="button" onClick={() => switchSubTab('cancelled')} className={subTabClass('cancelled')}>
+          Commandes annulées ({cancelledOrders.length})
         </button>
       </div>
 
@@ -425,8 +496,6 @@ export default function LiveOrdersTab({
                     <th className="py-3 px-5">Nom Client</th>
                     <th className="py-3 px-5">Heure</th>
                     <th className="py-3 px-5 text-right">Prix Unitaire</th>
-                    <th className="py-3 px-5 text-center">Quantité</th>
-                    <th className="py-3 px-5 text-right">Montant</th>
                     <th className="py-3 px-5 text-center">Imprimer</th>
                   </tr>
                 ) : (
@@ -448,7 +517,7 @@ export default function LiveOrdersTab({
                 {activeList.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={ordersSubTab === 'pending' ? 8 : 10}
+                      colSpan={ordersSubTab === 'pending' ? 6 : 10}
                       className="py-12 text-center text-slate-400 font-mono"
                     >
                       {emptyLabel}
@@ -456,9 +525,9 @@ export default function LiveOrdersTab({
                   </tr>
                 ) : ordersSubTab === 'pending' ? (
                   renderPendingRows()
-                ) : (
-                  renderConfirmedRows()
-                )}
+                ) : showDetailTable ? (
+                  renderDetailRows()
+                ) : null}
               </tbody>
             </table>
           </div>

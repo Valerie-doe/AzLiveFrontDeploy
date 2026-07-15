@@ -12,9 +12,9 @@ import ProductDetail from '../components/ProductDetail';
 
 interface ProductPageProps {
   products: Product[];
-  onAddProduct: (product: Omit<Product, 'id'>) => void;
-  onEditProduct: (id: string, updates: Partial<Product>) => void;
-  onDeleteProduct: (id: string) => void;
+  onAddProduct: (product: Omit<Product, 'id'>) => void | Promise<unknown>;
+  onEditProduct: (id: string, updates: Partial<Product>) => void | Promise<unknown>;
+  onDeleteProduct: (id: string) => void | Promise<unknown>;
 }
 
 export default function ProductPage({
@@ -50,15 +50,19 @@ export default function ProductPage({
     playNotificationSound('click');
   };
 
-  const handleSave = (payload: Omit<Product, 'id'>) => {
-    if (editingId) {
-      onEditProduct(editingId, payload);
-    } else {
-      onAddProduct(payload);
+  const handleSave = async (payload: Omit<Product, 'id'>) => {
+    try {
+      if (editingId) {
+        await onEditProduct(editingId, payload);
+      } else {
+        await onAddProduct(payload);
+      }
+      setIsAdding(false);
+      setEditingId(null);
+      playNotificationSound('confirm');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erreur lors de l'enregistrement du produit.");
     }
-    setIsAdding(false);
-    setEditingId(null);
-    playNotificationSound('confirm');
   };
 
   const handleDelete = (id: string) => {

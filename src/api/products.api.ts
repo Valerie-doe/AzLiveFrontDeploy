@@ -103,7 +103,18 @@ export async function updateProduct(
   });
 
   if (!res.ok) {
-    throw new Error("Erreur modification produit");
+    let detail = "Erreur modification produit";
+    try {
+      const body = await res.json();
+      detail =
+        (typeof body.detail === "string" && body.detail) ||
+        (typeof body.non_field_errors?.[0] === "string" && body.non_field_errors[0]) ||
+        (typeof body.variantes?.[0] === "string" && body.variantes[0]) ||
+        detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(detail);
   }
 
   return res.json();

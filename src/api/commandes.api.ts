@@ -51,11 +51,14 @@ export interface CommandeApiResponse {
   produit: CommandeProduitApi;
   variante: CommandeVarianteApi | null;
   ordre_jp: number;
+  quantite: number | null;
   statut: string;
   date_creation: string;
   paiement: CommandePaiementApi | null;
   livraison: CommandeLivraisonApi | null;
   live?: CommandeLiveApi | null;
+  prix_unitaire?: number;
+  prix_total?: number;
 }
 
 /**

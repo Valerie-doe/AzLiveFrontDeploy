@@ -45,6 +45,18 @@ export function mapOrderFromApi(api: CommandeApiResponse): Order {
   const variante = resolveVariante(api.produit, api.variante);
   const status = STATUT_TO_ORDER[api.statut] ?? 'JP capturé';
   const isMobileMoney = api.paiement?.methode === 'mobile_money';
+  const unitPrice = api.prix_unitaire != null
+    ? Number(api.prix_unitaire)
+    : variante
+      ? Number(variante.prix_unitaire) || 0
+      : 0;
+  // Quantité réelle confirmée (null tant que le client n'a pas validé le formulaire).
+  const quantity =
+    api.quantite != null && api.quantite > 0
+      ? api.quantite
+      : status === 'JP capturé'
+        ? undefined
+        : 1;
 
   return {
     id: String(api.id),
@@ -54,11 +66,11 @@ export function mapOrderFromApi(api: CommandeApiResponse): Order {
     customerHandle: resolveHandle(api.client),
     facebookId: api.client.facebook_id || undefined,
     orderDateTime: api.date_creation,
-    quantity: 1,
+    quantity,
     productId: String(api.produit.id),
     productName: api.produit.nom,
     productImage: api.produit.photo || undefined,
-    price: variante ? Number(variante.prix_unitaire) || 0 : 0,
+    price: unitPrice,
     currency: 'Ar',
     orderTime: formatOrderTime(api.date_creation),
     status,
