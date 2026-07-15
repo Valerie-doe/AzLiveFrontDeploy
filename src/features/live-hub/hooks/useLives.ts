@@ -76,6 +76,17 @@ export function useLives(enabled = true) {
     loadFacebookPages();
   }, [enabled, loadLives, loadFacebookPages]);
 
+  // Rafraîchit le hub (API Django seulement) tant qu'un live est en cours,
+  // pour voir passer le live en Archives quand TikTok se termine.
+  const hasLiveEnCours = liveSessions.some((s) => s.status === 'En cours');
+  useEffect(() => {
+    if (!enabled || !hasLiveEnCours) return;
+    const id = window.setInterval(() => {
+      void loadLives({ sync: false });
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [enabled, hasLiveEnCours, loadLives]);
+
   const refreshLive = useCallback(async (id: string): Promise<LiveSession | null> => {
     try {
       const data = await fetchLiveById(id);
