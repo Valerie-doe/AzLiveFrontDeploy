@@ -28,7 +28,7 @@ export default function ClientDetailPanel({
   onEditFormChange,
 }: ClientDetailPanelProps) {
   const handleSimulateChatAlert = (phone: string, handle: string) => {
-    alert(`💬 Notification envoyée sur Messenger à ${handle} (${phone}) : "Bonjour ! Votre colis est en cours de préparation pour livraison sur Tana."`);
+    alert(`Notification envoyée sur Messenger à ${handle} (${phone}) : "Bonjour ! Votre colis est en cours de préparation pour livraison sur Tana."`);
     playNotificationSound('confirm');
   };
 
@@ -63,7 +63,7 @@ export default function ClientDetailPanel({
                 ? 'text-amber-800 bg-amber-50 border border-amber-200'
                 : 'text-indigo-800 bg-indigo-50 border border-indigo-200'
             }`}>
-              {selectedClient.shippingType === 'Collecte' ? '🏪 Collecte' : '📦 Livraison'}
+              {selectedClient.shippingType === 'Collecte' ? 'Collecte' : 'Livraison'}
             </span>
           </div>
           <h3 className="font-black text-slate-900 text-base mt-1.5">{selectedClient.name}</h3>
@@ -178,8 +178,8 @@ export default function ClientDetailPanel({
                 onChange={(e) => onEditFormChange({ ...editForm, shippingType: e.target.value as 'Livraison' | 'Collecte' })}
                 className="w-full px-3 py-2 border rounded-xl focus:ring-1 focus:ring-indigo-500 focus:outline-none font-semibold text-slate-800 text-xs bg-white"
               >
-                <option value="Livraison">📦 Livraison (expédition)</option>
-                <option value="Collecte">🏪 Collecte (bureau / magasin)</option>
+                <option value="Livraison">Livraison (expédition)</option>
+                <option value="Collecte">Collecte (bureau / magasin)</option>
               </select>
             </div>
           </div>

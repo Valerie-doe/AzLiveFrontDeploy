@@ -35,7 +35,7 @@ export default function ClientStats({
         label="Fidélité (% + fidèles)"
         value={
           <span className="text-emerald-600">
-            {fidelityPercentage}% ({activeLoyalClients} clients) 🔥
+            {fidelityPercentage}% ({activeLoyalClients} clients)
           </span>
         }
         icon={<ShoppingBag className="h-5 w-5 text-emerald-600" />}

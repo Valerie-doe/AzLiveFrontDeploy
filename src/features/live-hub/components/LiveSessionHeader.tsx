@@ -128,10 +128,11 @@ export default function LiveSessionHeader({
 
         {selectedSession.status === 'En cours' && (
           <button
+            type="button"
             onClick={handleCloseClick}
-            className="px-5 py-2.5 bg-red-650 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer border-none"
+            className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wide transition-colors cursor-pointer border-2 border-red-700 shadow-md shadow-red-200 flex items-center gap-2"
           >
-            Clôturer le Live & Archiver Ventes
+            Clôturer le Live
           </button>
         )}
 

@@ -91,14 +91,23 @@ export async function startWhipBroadcast(bridge: LiveBroadcastBridge): Promise<L
     await peerConnection.setLocalDescription(offer);
     await waitForIceGathering(peerConnection);
 
-    const response = await fetch(bridge.whipUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/sdp',
-        ...(bridge.publishToken ? { Authorization: `Bearer ${bridge.publishToken}` } : {}),
-      },
-      body: peerConnection.localDescription?.sdp ?? '',
-    });
+    let response: Response;
+    try {
+      response = await fetch(bridge.whipUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/sdp',
+          ...(bridge.publishToken ? { Authorization: `Bearer ${bridge.publishToken}` } : {}),
+        },
+        body: peerConnection.localDescription?.sdp ?? '',
+      });
+    } catch {
+      throw new Error(
+        'Impossible de joindre MediaMTX (Failed to fetch). '
+          + 'Le service est souvent en 502 / redémarré. Vérifie les logs azlivemtxn '
+          + 'et que MEDIAMTX_AUTH_URL pointe vers le backend joignable.',
+      );
+    }
 
     if (!response.ok) {
       throw new Error(`Le serveur de diffusion a refusé le flux (HTTP ${response.status}).`);

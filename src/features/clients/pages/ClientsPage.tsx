@@ -85,7 +85,7 @@ export default function ClientsPage({ liveSessions, onUpdateClientInOrders }: Cl
             onChange={(e) => handleLiveChange(e.target.value)}
             className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm min-w-[220px]"
           >
-            <option value={ALL_LIVES}>📁 Tous les Lives</option>
+            <option value={ALL_LIVES}>Tous les Lives</option>
             {liveOptions.map((live) => (
               <option key={live.id} value={live.id}>
                 {live.title}

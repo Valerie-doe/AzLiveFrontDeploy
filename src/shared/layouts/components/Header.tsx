@@ -12,7 +12,7 @@ export default function Header({ isMobileMenuOpen, onToggleMobileMenu, onShowGui
   return (
     <div className="lg:hidden sticky top-0 z-40 bg-primary border-b border-secondary h-16 w-full px-4 flex items-center justify-between shadow-xs">
       <div className="flex items-center gap-3">
-        <img src="/src/assets/logo/Logo.png" alt="AZLive" className="h-9 w-9 rounded-xl object-cover shadow-xs" />
+        <img src="https://res.cloudinary.com/dj9qwddts/image/upload/v1784121065/Logo_gmt4mc.png" alt="AZLive" className="h-9 w-9 rounded-xl object-cover shadow-xs" />
         <div>
           <span className="font-black text-sm text-secondary block">AZLive</span>
           <span className="bg-accent text-secondary text-[8px] px-1.5 py-0.2 rounded font-extrabold ml-1.5 border border-secondary">

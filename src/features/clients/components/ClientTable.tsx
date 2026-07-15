@@ -68,10 +68,10 @@ export default function ClientTable({
             onChange={(e) => { onFilterChange(e.target.value as typeof activeFilter); onPageChange(1); playNotificationSound('click'); }}
             className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm min-w-[150px]"
           >
-            <option value="all">📁 Tout ({clientsList.length})</option>
-            <option value="femme">👩 Femmes ({clientsList.filter((c) => c.gender === 'Femme').length})</option>
-            <option value="homme">👨 Hommes ({clientsList.filter((c) => c.gender === 'Homme').length})</option>
-            <option value="best">🔥 Meilleurs clients ({clientsList.filter((c) => c.ordersCount >= 2 || c.totalSpent >= 80000).length})</option>
+            <option value="all">Tout ({clientsList.length})</option>
+            <option value="femme">Femmes ({clientsList.filter((c) => c.gender === 'Femme').length})</option>
+            <option value="homme">Hommes ({clientsList.filter((c) => c.gender === 'Homme').length})</option>
+            <option value="best">Meilleurs clients ({clientsList.filter((c) => c.ordersCount >= 2 || c.totalSpent >= 80000).length})</option>
           </select>
         </div>
       </div>

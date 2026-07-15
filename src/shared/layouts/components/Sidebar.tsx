@@ -41,7 +41,7 @@ export default function Sidebar({
         
         {/* Logo & Platform Info Branding */}
         <div className="flex items-center gap-2.5">
-          <img src="/src/assets/logo/Logo.png" alt="AZLive" className="h-9 w-9 rounded-xl object-cover shadow-lg shadow-secondary shrink-0" />
+          <img src="https://res.cloudinary.com/dj9qwddts/image/upload/v1784121065/Logo_gmt4mc.png" alt="AZLive" className="h-9 w-9 rounded-xl object-cover shadow-lg shadow-secondary shrink-0" />
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <span className="font-extrabold text-base text-secondary tracking-tight">AZLive</span>

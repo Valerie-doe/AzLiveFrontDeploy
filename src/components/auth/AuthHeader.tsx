@@ -10,7 +10,7 @@ export default function AuthHeader({ onShowFaq }: AuthHeaderProps) {
   return (
     <header className="max-w-7xl mx-auto w-full flex items-center justify-between pb-6 border-b border-secondary relative z-10 bg-primary">
       <div className="flex items-center gap-3">
-        <img src="/src/assets/logo/Logo.png" alt="AZLive" className="h-10 w-10 rounded-xl object-cover shadow-md shadow-secondary" />
+        <img src="https://res.cloudinary.com/dj9qwddts/image/upload/v1784121065/Logo_gmt4mc.png" alt="AZLive" className="h-10 w-10 rounded-xl object-cover shadow-md shadow-secondary" />
         <div>
           <div className="flex items-center gap-1.5">
             <span className="font-extrabold text-sm text-secondary tracking-tight">AZLive Platform</span>

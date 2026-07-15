@@ -232,7 +232,17 @@ export default function LiveShoppingHubPage({
       // Diffusion navigateur : si le backend a provisionné le pont WebRTC (live réel),
       // on demande l'autorisation caméra et on publie le flux vers Facebook via MediaMTX.
       try {
-        await broadcast.startBroadcast(startedSession.broadcast);
+        const published = await broadcast.startBroadcast(startedSession.broadcast);
+        if (!published) {
+          const webrtcStatus = startedSession.broadcast?.status;
+          const detail =
+            webrtcStatus === 'error'
+              ? 'MediaMTX est indisponible sur le serveur (pointe souvent encore vers localhost). Sans ce pont, Facebook ne reçoit pas de vidéo.'
+              : 'Aucun pont WebRTC prêt. En local MediaMTX tourne ; en Railway il faut un service MediaMTX + MEDIAMTX_WHIP_BASE_URL en HTTPS.';
+          alert(
+            `Live AZLive démarré, mais la caméra n'est pas diffusée vers Facebook.\n\n${detail}`,
+          );
+        }
       } catch (broadcastErr) {
         alert(
           broadcastErr instanceof Error

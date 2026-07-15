@@ -8,7 +8,6 @@ import {
   updateLive,
 } from '../../../api/lives.api';
 import { fetchFacebookPages } from '../../../api/facebookPages.api';
-import { enableVendeurDemoMode } from '../../../api/vendeurs.api';
 import { LiveSession } from '../../../types';
 import { getConnectedPageNames, getStoredVendeurId } from '../../auth/services/authStorage';
 import {
@@ -17,20 +16,6 @@ import {
   buildLiveUpdatePayload,
   mapLiveFromApi,
 } from '../utils/liveMappers';
-
-/**
- * Détecte l'erreur de permissions Facebook (#200) renvoyée par le backend quand
- * le vendeur n'est pas en mode démo et que les scopes Pages manquent.
- */
-function isFacebookPermissionError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const message = err.message.toLowerCase();
-  return (
-    message.includes('#200') ||
-    message.includes('permission') ||
-    message.includes('live facebook')
-  );
-}
 
 /**
  * @param enabled  Charge (et recharge) les lives/pages uniquement quand l'utilisateur est
@@ -180,24 +165,10 @@ export function useLives(enabled = true) {
 
   const startLiveSession = useCallback(async (id: string) => {
     setSaving(true);
-    setError(null);
-    try {
-      let updated;
+      setError(null);
       try {
-        updated = await demarrerLive(id);
-      } catch (err) {
-        // Pas encore de vrai test Facebook : si le backend refuse à cause des
-        // permissions Pages (#200), on bascule le vendeur sur le flux de test
-        // (mode démo, diffusions simulées) puis on relance le démarrage.
-        const vendeurId = getStoredVendeurId();
-        if (vendeurId != null && isFacebookPermissionError(err)) {
-          await enableVendeurDemoMode(vendeurId);
-          updated = await demarrerLive(id);
-        } else {
-          throw err;
-        }
-      }
-      const mapped = mapLiveFromApi(updated);
+        let updated = await demarrerLive(id);
+        const mapped = mapLiveFromApi(updated);
       setLiveSessions((prev) => prev.map((live) => (live.id === id ? mapped : live)));
       return mapped;
     } catch (err) {

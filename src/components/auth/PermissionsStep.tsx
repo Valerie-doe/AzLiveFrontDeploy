@@ -98,7 +98,9 @@ export default function PermissionsStep({
           disabled={isSubmitting}
           className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer text-center disabled:opacity-60"
         >
-          {isSubmitting ? 'Redirection vers Facebook...' : 'Accepter et continuer'}
+          {isSubmitting
+            ? `Redirection vers ${selectedPlatform}...`
+            : 'Accepter et continuer'}
         </button>
       </div>
     </motion.div>
