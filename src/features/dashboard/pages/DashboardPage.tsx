@@ -13,17 +13,19 @@ export default function DashboardPage({ products }: DashboardPageProps) {
   const { data, loading, error } = useDashboardStats(products);
 
   return (
-    <div className="space-y-6" id="azlive-analytics-dashboard">
+    <div className="space-y-4 sm:space-y-6 px-0" id="azlive-analytics-dashboard">
       {/* HEADER */}
-      <div>
-        <h2 className="text-2xl font-black tracking-tight text-secondary">Mon Tableau de Bord (Statistiques simples)</h2>
-        <p className="text-sm text-slate-500 font-serif">
-          Suivez facilement vos ventes, l'argent reçu en Mobile Money et le rendement de vos produits stars.
+      <div className="min-w-0">
+        <h2 className="text-xl sm:text-2xl font-black tracking-tight text-secondary break-words">
+          Mon Tableau de Bord
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 font-serif mt-1">
+          Suivez facilement vos ventes, l&apos;argent reçu en Mobile Money et le rendement de vos produits stars.
         </p>
       </div>
 
       {error && (
-        <div className="bg-white border border-rose-100 rounded-2xl p-4 text-xs text-rose-600">
+        <div className="bg-white border border-rose-100 rounded-2xl p-3 sm:p-4 text-xs text-rose-600">
           {error}
         </div>
       )}

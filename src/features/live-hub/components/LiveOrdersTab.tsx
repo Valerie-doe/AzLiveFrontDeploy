@@ -105,20 +105,7 @@ function ProductThumb({ order }: { order: Order }) {
 }
 
 function formatDateTime(order: Order): string {
-  const iso = order.orderDateTime;
-  if (iso) {
-    const parsed = new Date(iso);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toLocaleString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    }
-  }
-  return order.orderTime || '—';
+  return order.orderTime || order.orderDateTime || '—';
 }
 
 export default function LiveOrdersTab({

@@ -149,12 +149,25 @@ export function useLives(enabled = true) {
   const updateLiveDressing = useCallback(async (id: string, productIds: string[]) => {
     setSaving(true);
     setError(null);
+    // Optimistic : l'UI se met à jour tout de suite (ressenti ~instantané).
+    let previous: string[] | undefined;
+    setLiveSessions((prev) => {
+      previous = prev.find((live) => live.id === id)?.selectedProductIds;
+      return prev.map((live) =>
+        live.id === id ? { ...live, selectedProductIds: productIds } : live,
+      );
+    });
     try {
       const updated = await updateLive(id, buildDressingPayload(productIds));
       const mapped = mapLiveFromApi(updated);
       setLiveSessions((prev) => prev.map((live) => (live.id === id ? mapped : live)));
       return mapped;
     } catch (err) {
+      if (previous) {
+        setLiveSessions((prev) =>
+          prev.map((live) => (live.id === id ? { ...live, selectedProductIds: previous } : live)),
+        );
+      }
       const message = err instanceof Error ? err.message : 'Erreur mise à jour du dressing';
       setError(message);
       throw err;
@@ -165,13 +178,20 @@ export function useLives(enabled = true) {
 
   const startLiveSession = useCallback(async (id: string) => {
     setSaving(true);
-      setError(null);
-      try {
-        let updated = await demarrerLive(id);
-        const mapped = mapLiveFromApi(updated);
+    setError(null);
+    // Feedback immédiat : statut « En cours » pendant l'appel Facebook/MediaMTX.
+    setLiveSessions((prev) =>
+      prev.map((live) => (live.id === id ? { ...live, status: 'En cours' as const } : live)),
+    );
+    try {
+      const updated = await demarrerLive(id);
+      const mapped = mapLiveFromApi(updated);
       setLiveSessions((prev) => prev.map((live) => (live.id === id ? mapped : live)));
       return mapped;
     } catch (err) {
+      setLiveSessions((prev) =>
+        prev.map((live) => (live.id === id ? { ...live, status: 'Créé' as const } : live)),
+      );
       const message = err instanceof Error ? err.message : 'Erreur démarrage du live';
       setError(message);
       throw err;
@@ -183,12 +203,18 @@ export function useLives(enabled = true) {
   const closeLiveSession = useCallback(async (id: string) => {
     setSaving(true);
     setError(null);
+    setLiveSessions((prev) =>
+      prev.map((live) => (live.id === id ? { ...live, status: 'Terminé' as const } : live)),
+    );
     try {
       const updated = await arreterLive(id);
       const mapped = mapLiveFromApi(updated);
       setLiveSessions((prev) => prev.map((live) => (live.id === id ? mapped : live)));
       return mapped;
     } catch (err) {
+      setLiveSessions((prev) =>
+        prev.map((live) => (live.id === id ? { ...live, status: 'En cours' as const } : live)),
+      );
       const message = err instanceof Error ? err.message : 'Erreur clôture du live';
       setError(message);
       throw err;

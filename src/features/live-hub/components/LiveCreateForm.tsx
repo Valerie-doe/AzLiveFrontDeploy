@@ -1,6 +1,6 @@
 import React from 'react';
 import { Collaborator } from '../../../types';
-import { X, Check, Sparkles } from 'lucide-react';
+import { X, Check, Sparkles, Loader2 } from 'lucide-react';
 import { playNotificationSound } from '../../../sound';
 
 interface LiveCreateFormProps {
@@ -93,7 +93,7 @@ export default function LiveCreateForm({
 
 
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
             <div>
               <label className="text-slate-400 block mb-1 font-mono uppercase text-[9px] font-bold">
@@ -104,7 +104,8 @@ export default function LiveCreateForm({
                 type="datetime-local"
                 value={liveDate}
                 onChange={(e) => setLiveDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-700 bg-white cursor-pointer font-bold"
+                disabled={saving}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-700 bg-white cursor-pointer font-bold disabled:opacity-60"
               />
 
             </div>
@@ -233,15 +234,18 @@ export default function LiveCreateForm({
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl transition-all disabled:opacity-60"
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-extrabold rounded-xl transition-all disabled:opacity-70 disabled:cursor-wait inline-flex items-center gap-2"
           >
-
-            {saving
-              ? 'Enregistrement...'
-              : editingSessionId
-                ? 'Enregistrer les modifications 💾'
-                : 'Enregistrer & Créer le Live 📅'}
-
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Enregistrement…
+              </>
+            ) : editingSessionId ? (
+              'Enregistrer les modifications'
+            ) : (
+              'Enregistrer & Créer le Live'
+            )}
           </button>
 
 

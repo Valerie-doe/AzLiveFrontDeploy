@@ -388,6 +388,7 @@ export default function LiveShoppingHubPage({
           onAddToDressing={handleAddToDressing}
           onRemoveFromDressing={handleRemoveFromDressing}
           dressingSaving={livesSaving}
+          actionBusy={livesSaving}
           ordersPage={hub.ordersPage}
           setOrdersPage={hub.setOrdersPage}
           productsPage={hub.productsPage}

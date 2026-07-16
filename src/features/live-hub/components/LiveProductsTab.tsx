@@ -1,5 +1,5 @@
-import React from 'react';
-import { Printer, Plus, ShoppingBag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, Plus, ShoppingBag, Loader2 } from 'lucide-react';
 import { LiveSession, Product, Order } from '../../../types';
 import { playNotificationSound } from '../../../sound';
 import { PaginationControls } from '../../../shared';
@@ -27,8 +27,8 @@ interface LiveProductsTabProps {
   setLiveEditColor: (val: string) => void;
   liveIsAddingProduct: boolean;
   setLiveIsAddingProduct: (val: boolean) => void;
-  onAddProduct: (prod: Omit<Product, 'id'>) => void;
-  onEditProduct: (id: string, updates: Partial<Product>) => void;
+  onAddProduct: (prod: Omit<Product, 'id'>) => void | Promise<void>;
+  onEditProduct: (id: string, updates: Partial<Product>) => void | Promise<void>;
   onRemoveFromDressing: (productId: string) => void | Promise<void>;
   onPrintProductClick: (jpCode: string) => void;
   onPrintAll: () => void;
@@ -62,6 +62,7 @@ export default function LiveProductsTab({
   onPrintProductClick,
   onPrintAll,
 }: LiveProductsTabProps) {
+  const [formBusy, setFormBusy] = useState(false);
   // Live terminé : consultation et impression autorisées, mais aucune modification du dressing.
   const isTerminated = selectedSession.status === 'Terminé';
 
@@ -105,42 +106,50 @@ export default function LiveProductsTab({
     playNotificationSound('click');
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formBusy) return;
     if (!liveEditName.trim() || !liveEditJpCode.trim() || liveEditPrice <= 0) {
       alert("Veuillez remplir le nom, le code JP et définir un prix positif.");
       return;
     }
-    if (liveIsAddingProduct) {
-      onAddProduct({
-        name: liveEditName.trim(),
-        variants: [{
-          id: `var-${Date.now()}`,
-          jpCode: liveEditJpCode.trim().toUpperCase(),
-          size: liveEditSize.trim() || 'Freesize',
-          color: liveEditColor.trim() || 'Unique',
-          prixUnitaire: Number(liveEditPrice),
-          stock: Number(liveEditStock),
-        }],
-      });
-      setLiveIsAddingProduct(false);
-    } else if (liveEditingProductId) {
-      const existing = products.find((p) => p.id === liveEditingProductId);
-      const firstVariant = existing?.variants[0];
-      onEditProduct(liveEditingProductId, {
-        name: liveEditName.trim(),
-        variants: [{
-          id: firstVariant?.id || `var-${Date.now()}`,
-          jpCode: liveEditJpCode.trim().toUpperCase(),
-          size: liveEditSize.trim() || 'Freesize',
-          color: liveEditColor.trim() || 'Unique',
-          prixUnitaire: Number(liveEditPrice),
-          stock: Number(liveEditStock),
-        }, ...(existing?.variants.slice(1) || [])],
-      });
-      setLiveEditingProductId(null);
+    setFormBusy(true);
+    try {
+      if (liveIsAddingProduct) {
+        await onAddProduct({
+          name: liveEditName.trim(),
+          variants: [{
+            id: `var-${Date.now()}`,
+            jpCode: liveEditJpCode.trim().toUpperCase(),
+            size: liveEditSize.trim() || 'Freesize',
+            color: liveEditColor.trim() || 'Unique',
+            prixUnitaire: Number(liveEditPrice),
+            stock: Number(liveEditStock),
+          }],
+        });
+        setLiveIsAddingProduct(false);
+      } else if (liveEditingProductId) {
+        const existing = products.find((p) => p.id === liveEditingProductId);
+        const firstVariant = existing?.variants[0];
+        await onEditProduct(liveEditingProductId, {
+          name: liveEditName.trim(),
+          variants: [{
+            id: firstVariant?.id || `var-${Date.now()}`,
+            jpCode: liveEditJpCode.trim().toUpperCase(),
+            size: liveEditSize.trim() || 'Freesize',
+            color: liveEditColor.trim() || 'Unique',
+            prixUnitaire: Number(liveEditPrice),
+            stock: Number(liveEditStock),
+          }, ...(existing?.variants.slice(1) || [])],
+        });
+        setLiveEditingProductId(null);
+      }
+      playNotificationSound('confirm');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erreur lors de l'enregistrement.");
+    } finally {
+      setFormBusy(false);
     }
-    playNotificationSound('confirm');
   };
 
   return (
@@ -416,9 +425,19 @@ export default function LiveProductsTab({
               </button>
               <button
                 type="submit"
-                className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-705 hover:bg-indigo-700 text-white font-black rounded-lg border-none cursor-pointer"
+                disabled={formBusy}
+                className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-black rounded-lg border-none cursor-pointer disabled:opacity-70 disabled:cursor-wait inline-flex items-center justify-center gap-1.5"
               >
-                {liveIsAddingProduct ? 'Ajouter' : 'Enregistrer'}
+                {formBusy ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Enregistrement…
+                  </>
+                ) : liveIsAddingProduct ? (
+                  'Ajouter'
+                ) : (
+                  'Enregistrer'
+                )}
               </button>
             </div>
           </form>

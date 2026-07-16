@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, ProductImage } from '../../../types';
 import { playNotificationSound } from '../../../sound';
-import { Tag, X, ImagePlus } from 'lucide-react';
+import { Tag, X, ImagePlus, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { uploadToCloudinary } from "../../../api/upload.cloudinary";
 import { getNextJpCode, resolveProductImageUrl } from '../utils/productUtils';
@@ -34,6 +34,7 @@ export default function ProductForm({
   const [newVarColor, setNewVarColor] = useState('');
   const [newVarStock, setNewVarStock] = useState<number>(10);
   const [newVarPrixUnitaire, setNewVarPrixUnitaire] = useState<number>(0);
+  const [saving, setSaving] = useState(false);
 
   // Initialise le formulaire uniquement à l'ouverture / changement de produit édité.
   // Ne pas dépendre de `products` : le polling stock (~10s) recrée le tableau et
@@ -119,8 +120,9 @@ export default function ProductForm({
     setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
     playNotificationSound('click');
   };
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     if (!name.trim()) {
       alert('Veuillez remplir le nom du produit.');
       return;
@@ -151,36 +153,39 @@ export default function ProductForm({
       }];
     }
 
-    const uploadedUrls = imageFiles.length
-      ? await Promise.all(imageFiles.map((file) => uploadToCloudinary(file)))
-      : [];
-
-    const finalImages: ProductImage[] = [
-      ...existingImages,
-      ...uploadedUrls.map((url, index) => ({
-        id: `temp-${Date.now()}-${index}`,
-        url,
-      })),
-    ];
-
-    const payload = {
-      name: name.trim(),
-      image: finalImages[0]?.url || undefined,
-      images: finalImages,
-      variants: finalVariants.map((v) => ({
-        id: v.id,
-        size: v.size,
-        color: v.color,
-        stock: v.stock,
-        jpCode: v.jpCode.trim().toUpperCase(),
-        prixUnitaire: Number(v.prixUnitaire),
-      })),
-    };
-
+    setSaving(true);
     try {
+      const uploadedUrls = imageFiles.length
+        ? await Promise.all(imageFiles.map((file) => uploadToCloudinary(file)))
+        : [];
+
+      const finalImages: ProductImage[] = [
+        ...existingImages,
+        ...uploadedUrls.map((url, index) => ({
+          id: `temp-${Date.now()}-${index}`,
+          url,
+        })),
+      ];
+
+      const payload = {
+        name: name.trim(),
+        image: finalImages[0]?.url || undefined,
+        images: finalImages,
+        variants: finalVariants.map((v) => ({
+          id: v.id,
+          size: v.size,
+          color: v.color,
+          stock: v.stock,
+          jpCode: v.jpCode.trim().toUpperCase(),
+          prixUnitaire: Number(v.prixUnitaire),
+        })),
+      };
+
       await onSave(payload);
     } catch {
       // Erreur déjà affichée par ProductPage / hook.
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -566,15 +571,24 @@ export default function ProductForm({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer text-center border-none"
+            disabled={saving}
+            className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer text-center border-none disabled:opacity-60"
           >
             Annuler
           </button>
           <button
             type="submit"
-            className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer text-center border-none"
+            disabled={saving}
+            className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl text-xs font-black transition-all cursor-pointer text-center border-none disabled:opacity-70 disabled:cursor-wait inline-flex items-center justify-center gap-1.5"
           >
-            Enregistrer
+            {saving ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Enregistrement…
+              </>
+            ) : (
+              'Enregistrer'
+            )}
           </button>
         </div>
       </form>

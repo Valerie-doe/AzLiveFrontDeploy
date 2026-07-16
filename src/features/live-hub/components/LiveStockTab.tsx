@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, Plus } from 'lucide-react';
+import { CheckCircle, Plus, Loader2 } from 'lucide-react';
 import { LiveSession, Product } from '../../../types';
 import { playNotificationSound } from '../../../sound';
 import { SearchInput } from '../../../shared';
@@ -46,8 +46,32 @@ export default function LiveStockTab({
 
   const canAddToDressing = (p: Product) => getProductStock(p) >= 1;
 
-  const handleRowClick = (p: Product, isAlreadyInDressing: boolean) => {
-    if (isTerminated || isAlreadyInDressing) return;
+  const isAlreadyInDressing = (p: Product) =>
+    Boolean(selectedSession.selectedProductIds?.includes(p.id));
+
+  /** Articles visibles (filtre) encore sélectionnables pour le dressing. */
+  const selectableFiltered = filteredStock.filter(
+    (p) => !isAlreadyInDressing(p) && canAddToDressing(p) && !isTerminated,
+  );
+  const selectableIds = selectableFiltered.map((p) => p.id);
+  const allSelectableChecked =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedStockProductIds.includes(id));
+  const someSelectableChecked =
+    selectableIds.some((id) => selectedStockProductIds.includes(id)) && !allSelectableChecked;
+
+  const handleToggleSelectAll = () => {
+    if (isTerminated || selectableIds.length === 0) return;
+    playNotificationSound('click');
+    if (allSelectableChecked) {
+      // Décoche uniquement les articles du filtre courant.
+      setSelectedStockProductIds((prev) => prev.filter((id) => !selectableIds.includes(id)));
+    } else {
+      setSelectedStockProductIds((prev) => [...new Set([...prev, ...selectableIds])]);
+    }
+  };
+
+  const handleRowClick = (p: Product, alreadyInDressing: boolean) => {
+    if (isTerminated || alreadyInDressing) return;
     if (!canAddToDressing(p)) {
       playNotificationSound('click');
       return;
@@ -95,19 +119,62 @@ export default function LiveStockTab({
               Consultez et cochez les articles de votre catalogue pour les lier à ce direct.
             </p>
           </div>
-          <SearchInput
-            value={stockSearchQuery}
-            onChange={setStockSearchQuery}
-            placeholder="Rechercher nom, taille, couleur, code..."
-            className="w-full sm:w-72"
-          />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleToggleSelectAll}
+              disabled={isTerminated || selectableIds.length === 0}
+              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide border transition-all whitespace-nowrap ${
+                isTerminated || selectableIds.length === 0
+                  ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+                  : allSelectableChecked
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 cursor-pointer'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer'
+              }`}
+            >
+              {allSelectableChecked
+                ? 'Tout désélectionner'
+                : `Tout sélectionner (${selectableIds.length})`}
+            </button>
+            <SearchInput
+              value={stockSearchQuery}
+              onChange={setStockSearchQuery}
+              placeholder="Rechercher nom, taille, couleur, code..."
+              className="w-full sm:w-64"
+            />
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-650 font-sans">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-mono text-[9px] uppercase tracking-wider font-bold">
-                <th className="py-3 px-5 text-center w-12">Cocher</th>
+                <th className="py-3 px-5 text-center w-14">
+                  <div className="flex flex-col items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={allSelectableChecked}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelectableChecked;
+                      }}
+                      disabled={isTerminated || selectableIds.length === 0}
+                      onChange={handleToggleSelectAll}
+                      title={
+                        allSelectableChecked
+                          ? 'Tout désélectionner'
+                          : 'Tout sélectionner (articles disponibles)'
+                      }
+                      className={`h-4 w-4 border-slate-300 text-indigo-600 rounded focus:ring-indigo-500 ${
+                        isTerminated || selectableIds.length === 0
+                          ? 'cursor-not-allowed opacity-50'
+                          : 'cursor-pointer'
+                      }`}
+                    />
+                    <span className="text-[8px] normal-case tracking-normal font-semibold text-slate-400">
+                      Tous
+                    </span>
+                  </div>
+                </th>
                 <th className="py-3 px-5">Code unique</th>
                 <th className="py-3 px-5">Nom d'article / Description</th>
                 <th className="py-3 px-5 text-center">Stock restant</th>
@@ -255,17 +322,21 @@ export default function LiveStockTab({
             type="button"
             disabled={selectedStockProductIds.length === 0 || dressingSaving || isTerminated}
             onClick={handleAddToDressing}
-            className={`w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all text-center flex items-center justify-center gap-2 border-none shadow-md ${
+            className={`w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all text-center flex items-center justify-center gap-2 border-none shadow-md active:scale-[0.98] ${
               selectedStockProductIds.length === 0 || dressingSaving || isTerminated
-                ? 'bg-slate-100 text-slate-405 text-slate-400 cursor-not-allowed shadow-none'
-                : 'bg-indigo-650 bg-indigo-600 hover:bg-indigo-705 hover:bg-indigo-700 text-white shadow-indigo-100 hover:-translate-y-0.5 cursor-pointer'
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100 hover:-translate-y-0.5 cursor-pointer'
             }`}
           >
-            <Plus className="h-4 w-4" />{' '}
+            {dressingSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             {isTerminated
               ? 'Live terminé'
               : dressingSaving
-                ? 'Ajout en cours...'
+                ? 'Ajout en cours…'
                 : `Ajouter au Dressing (${selectedStockProductIds.length})`}
           </button>
         </div>

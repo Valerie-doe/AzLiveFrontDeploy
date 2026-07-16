@@ -33,7 +33,13 @@ function resolveVariante(
 function formatOrderTime(dateCreation: string): string {
   const parsed = new Date(dateCreation);
   if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toTimeString().split(' ')[0];
+  const day = parsed.getDate().toString().padStart(2, '0');
+  const month = (parsed.getMonth() + 1).toString().padStart(2, '0');
+  const year = parsed.getFullYear();
+  const hours = parsed.getHours().toString().padStart(2, '0');
+  const minutes = parsed.getMinutes().toString().padStart(2, '0');
+  const seconds = parsed.getSeconds().toString().padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
 function resolveHandle(client: CommandeApiResponse['client']): string {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Printer, Link2, Check } from 'lucide-react';
+import { ArrowLeft, Printer, Link2, Check, Loader2 } from 'lucide-react';
 import { LiveSession } from '../../../types';
 import { playNotificationSound } from '../../../sound';
 import { formatLiveDate } from '../utils/dateUtils';
@@ -10,6 +10,8 @@ interface LiveSessionHeaderProps {
   onStartLive: () => void;
   onCloseLive: () => void;
   onPrintTickets: () => void;
+  /** true pendant lancer / clôturer / dressing — feedback visuel immédiat au clic. */
+  busy?: boolean;
 }
 
 export default function LiveSessionHeader({
@@ -18,17 +20,23 @@ export default function LiveSessionHeader({
   onStartLive,
   onCloseLive,
   onPrintTickets,
+  busy = false,
 }: LiveSessionHeaderProps) {
   const handleBackClick = () => {
+    if (busy) return;
     onBack();
     playNotificationSound('click');
   };
 
   const handleStartClick = () => {
+    if (busy) return;
+    playNotificationSound('click');
     onStartLive();
   };
 
   const handleCloseClick = () => {
+    if (busy) return;
+    playNotificationSound('click');
     onCloseLive();
   };
 
@@ -119,10 +127,18 @@ export default function LiveSessionHeader({
 
         {selectedSession.status === 'Créé' && (
           <button
+            type="button"
             onClick={handleStartClick}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-705 text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer shadow-md border-none"
+            disabled={busy}
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl text-xs font-black uppercase transition-all cursor-pointer shadow-md border-none disabled:opacity-70 disabled:cursor-wait inline-flex items-center gap-2"
           >
-            Lancer le Live 🚀
+            {busy ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Lancement…
+              </>
+            ) : (
+              'Lancer le Live'
+            )}
           </button>
         )}
 
@@ -130,9 +146,16 @@ export default function LiveSessionHeader({
           <button
             type="button"
             onClick={handleCloseClick}
-            className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wide transition-colors cursor-pointer border-2 border-red-700 shadow-md shadow-red-200 flex items-center gap-2"
+            disabled={busy}
+            className="px-5 py-3 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all cursor-pointer border-2 border-red-700 shadow-md shadow-red-200 inline-flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait"
           >
-            Clôturer le Live
+            {busy ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Clôture…
+              </>
+            ) : (
+              'Clôturer le Live'
+            )}
           </button>
         )}
 

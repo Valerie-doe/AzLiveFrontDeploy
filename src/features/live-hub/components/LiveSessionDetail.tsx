@@ -27,6 +27,8 @@ interface LiveSessionDetailProps {
   onAddToDressing: (sessionId: string, productIds: string[]) => Promise<void>;
   onRemoveFromDressing: (productId: string) => Promise<void>;
   dressingSaving?: boolean;
+  /** Action en cours (lancer / clôturer / enregistrer) pour feedback bouton. */
+  actionBusy?: boolean;
   ordersPage: number;
   setOrdersPage: (page: number) => void;
   productsPage: number;
@@ -80,6 +82,7 @@ export default function LiveSessionDetail({
   onAddToDressing,
   onRemoveFromDressing,
   dressingSaving = false,
+  actionBusy = false,
   ordersPage,
   setOrdersPage,
   productsPage,
@@ -129,6 +132,7 @@ export default function LiveSessionDetail({
         onStartLive={onStartLive}
         onCloseLive={onCloseLive}
         onPrintTickets={onPrintTickets}
+        busy={actionBusy || dressingSaving}
       />
 
       <LiveSessionStats sessionOrders={sessionOrders} />
@@ -157,10 +161,12 @@ export default function LiveSessionDetail({
               commande en temps réel.
             </p>
             <button
+              type="button"
               onClick={onStartLive}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-705 hover:bg-indigo-700 text-white font-extrabold rounded-xl text-xs uppercase cursor-pointer shadow-md inline-flex items-center gap-2 border-none"
+              disabled={actionBusy}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-extrabold rounded-xl text-xs uppercase cursor-pointer shadow-md inline-flex items-center gap-2 border-none disabled:opacity-70 disabled:cursor-wait"
             >
-              Lancer le Live maintenant 🚀
+              {actionBusy ? 'Lancement…' : 'Lancer le Live maintenant'}
             </button>
           </div>
         ) : (
