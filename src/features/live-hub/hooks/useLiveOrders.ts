@@ -6,7 +6,7 @@ import { mapOrderFromApi } from '../utils/orderMappers';
 const POLL_INTERVAL_MS = 15000;
 
 /** Un live réel (créé côté backend) possède un id numérique ; les lives locaux/démo ont un id textuel. */
-function isBackendLive(liveId: string | null): boolean {
+export function isBackendLive(liveId: string | null): boolean {
   return liveId != null && /^\d+$/.test(liveId);
 }
 

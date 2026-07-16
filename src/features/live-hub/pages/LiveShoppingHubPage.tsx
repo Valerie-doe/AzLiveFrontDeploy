@@ -5,7 +5,7 @@ import { LiveSession, Order, Product, Collaborator, ChatStatus } from '../../../
 import { playNotificationSound } from '../../../sound';
 import { useLiveHub } from '../hooks/useLiveHub';
 import { useOwnedLiveSessions } from '../hooks/useOwnedLiveSessions';
-import { useLiveOrders } from '../hooks/useLiveOrders';
+import { useLiveOrders, isBackendLive } from '../hooks/useLiveOrders';
 import { useLiveBroadcast } from '../hooks/useLiveBroadcast';
 import { convertToInputValue } from '../utils/dateUtils';
 import LiveSessionList from '../components/LiveSessionList';
@@ -92,9 +92,16 @@ export default function LiveShoppingHubPage({
   const completedSessions = ownedLiveSessions.filter((s) => s.status === 'Terminé');
 
   // Capture JP automatique : commandes réelles du live en cours (polling backend).
-  // Si indisponible (mode démo / live non lancé), on garde la file existante.
+  // Si indisponible (mode démo / live non lancé), on garde la file existante — mais
+  // seulement pour un live local/démo. Un live réel (id backend) doit démarrer *vide*
+  // à sa création : il ne doit jamais hériter de la file globale `orders` (qui peut
+  // contenir des commandes d'un autre live/session de test).
   const liveOrders = useLiveOrders(selectedSession);
-  const detailOrders = liveOrders.enabled ? liveOrders.orders : orders;
+  const detailOrders = liveOrders.enabled
+    ? liveOrders.orders
+    : isBackendLive(selectedSession?.id ?? null)
+      ? []
+      : orders;
 
   // Restauration du Live après actualisation : `selectedSessionId` est lu depuis l'URL,
   // mais la liste des lives arrive de façon asynchrone. Tant que le chargement n'est pas
