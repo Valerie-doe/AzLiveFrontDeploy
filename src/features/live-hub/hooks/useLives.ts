@@ -68,7 +68,7 @@ export function useLives(enabled = true) {
     if (!enabled || !hasLiveEnCours) return;
     const id = window.setInterval(() => {
       void loadLives({ sync: false });
-    }, 60_000);
+    }, 30_000);
     return () => window.clearInterval(id);
   }, [enabled, hasLiveEnCours, loadLives]);
 
