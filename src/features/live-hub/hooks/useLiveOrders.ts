@@ -3,7 +3,7 @@ import { LiveSession, Order } from '../../../types';
 import { fetchCommandesByLive } from '../../../api/commandes.api';
 import { mapOrderFromApi } from '../utils/orderMappers';
 
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 15000;
 
 /** Un live réel (créé côté backend) possède un id numérique ; les lives locaux/démo ont un id textuel. */
 function isBackendLive(liveId: string | null): boolean {
