@@ -37,7 +37,8 @@ export interface LiveApiResponse {
   operateur: number | null;
   operateur_nom: string | null;
   pages_facebook: string[];
-  produits_dressing: LiveApiProduct[];
+  /** IDs du dressing (format rapide) ou objets produit (ancien format). */
+  produits_dressing: Array<number | LiveApiProduct>;
   chiffre_affaires: number;
   nb_fiches: number;
   confirmation_link?: string | null;

@@ -45,7 +45,10 @@ export function mapLiveFromApi(api: LiveApiResponse): LiveSession {
     date: api.date_live || '',
     status: STATUS_TO_UI[api.statut] ?? 'Créé',
     connectedPages: api.pages_facebook || [],
-    selectedProductIds: (api.produits_dressing || []).map((p) => String(p.id)),
+    // Backend renvoie des IDs (number[]) pour alléger la liste ; compat objets {id}.
+    selectedProductIds: (api.produits_dressing || []).map((p) =>
+      String(typeof p === 'object' && p !== null ? p.id : p),
+    ),
     assignedCollaborator: api.operateur_nom || undefined,
     operateurId: api.operateur,
     vendeurId: api.vendeur,
