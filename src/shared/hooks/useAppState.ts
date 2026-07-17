@@ -27,7 +27,7 @@ import {
 
 export function useAppState() {
   const [activeTabState, setActiveTabState] = useState<
-    'dashboard' | 'live_hub' | 'products' | 'clients' | 'collaborators' | 'search'
+    'dashboard' | 'live_hub' | 'products' | 'clients' | 'collaborators' | 'search' | 'settings'
   >(() => {
     const stored = localStorage.getItem('azlive_active_tab') as
       | 'dashboard'
@@ -36,11 +36,14 @@ export function useAppState() {
       | 'clients'
       | 'collaborators'
       | 'search'
+      | 'settings'
       | null;
     return stored || 'live_hub';
   });
 
-  const setActiveTab = (tab: 'dashboard' | 'live_hub' | 'products' | 'clients' | 'collaborators' | 'search') => {
+  const setActiveTab = (
+    tab: 'dashboard' | 'live_hub' | 'products' | 'clients' | 'collaborators' | 'search' | 'settings',
+  ) => {
     setActiveTabState(tab);
     try {
       localStorage.setItem('azlive_active_tab', tab);

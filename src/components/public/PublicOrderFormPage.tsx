@@ -175,6 +175,44 @@ export default function PublicOrderFormPage({ liveId }: PublicOrderFormPageProps
 
       const traitees = result.traitees || [];
       const erreurs = result.erreurs || [];
+      const stockOffers = erreurs.filter((er) => er.stock_propose != null && er.stock_propose > 0);
+
+      // Qty > stock : proposer le stock restant.
+      if (traitees.length === 0 && stockOffers.length > 0) {
+        const offer = stockOffers[0];
+        const accept = window.confirm(
+          `${offer.detail}\n\nCliquez OK pour confirmer avec ${offer.stock_propose} article(s).`,
+        );
+        if (accept) {
+          const retryItems = lookup.commandes.map((c) => ({
+            commande_id: c.commande_id,
+            quantite:
+              c.commande_id === offer.commande_id
+                ? Number(offer.stock_propose)
+                : quantites[c.commande_id] || 1,
+            accept_partial: c.commande_id === offer.commande_id,
+          }));
+          const retry = await submitPublicOrder(liveId, {
+            handle: handle.trim(),
+            nom: nom.trim(),
+            telephone: telephone.trim(),
+            adresse: adresse.trim(),
+            date_livraison: dateLivraison,
+            heure_livraison: heureLivraison,
+            accept_partial: true,
+            items: retryItems,
+          });
+          if ((retry.traitees || []).some((t) => t.complet)) {
+            setStep('success');
+            return;
+          }
+          setError((retry.erreurs || []).map((e) => e.detail).join(' • ') || 'Confirmation impossible.');
+          return;
+        }
+        setError(offer.detail);
+        return;
+      }
+
       const ruptures = erreurs.filter(
         (er) => er.rupture_stock || /rupture/i.test(er.detail || ''),
       );
@@ -360,11 +398,12 @@ export default function PublicOrderFormPage({ liveId }: PublicOrderFormPageProps
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
               <h2 className="font-extrabold text-slate-900 text-sm mb-3 flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4 text-secondary" />
-                {readyToConfirm ? 'Commande prête à confirmer' : 'Vos articles réservés'}
+                C&apos;est votre tour — confirmez votre commande
               </h2>
-              {readyToConfirm && (
-                <p className="text-[11px] text-emerald-700 font-semibold mb-3 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
-                  Une place s&apos;est libérée. Vérifiez vos articles puis validez la confirmation.
+              {lookup.commandes[0]?.timeout_minutes != null && (
+                <p className="text-[11px] text-amber-800 font-semibold mb-3 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  Vous avez {lookup.commandes[0].timeout_minutes} min pour confirmer. Passé ce délai,
+                  votre place passe au suivant.
                 </p>
               )}
               <div className="space-y-2">
@@ -374,7 +413,7 @@ export default function PublicOrderFormPage({ liveId }: PublicOrderFormPageProps
                   const canDecrease = qty > 1;
                   const canIncrease = maxQty == null || qty < maxQty;
                   const noStock =
-                    c.en_rupture || (c.stock_disponible != null && qty > c.stock_disponible);
+                    c.en_rupture || (c.stock_disponible != null && c.stock_disponible <= 0);
                   const isCancellingThis = cancellingId === c.commande_id;
                   return (
                     <div
@@ -404,8 +443,8 @@ export default function PublicOrderFormPage({ liveId }: PublicOrderFormPageProps
                               }`}
                             >
                               {noStock
-                                ? 'Liste d’attente (stock déjà réservé)'
-                                : `Stock dispo : ${c.stock_disponible}`}
+                                ? 'Stock épuisé'
+                                : `Stock disponible : ${c.stock_disponible}`}
                             </p>
                           )}
                         </div>
@@ -562,32 +601,38 @@ export default function PublicOrderFormPage({ liveId }: PublicOrderFormPageProps
             <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-amber-50 text-amber-600">
               <Clock className="h-9 w-9" />
             </div>
-            <h2 className="text-lg font-black text-slate-900">Liste d&apos;attente</h2>
+            <h2 className="text-lg font-black text-slate-900">Pas encore votre tour</h2>
             {handle && (
               <p className="text-xs text-slate-500">
                 Compte : <span className="font-mono font-bold text-slate-700">@{handle}</span>
               </p>
             )}
             <p className="text-sm text-slate-500 font-serif">
-              Merci {nom || ''}. Vos informations sont enregistrées. Le stock est déjà réservé
-              par d&apos;autres clients : vous n&apos;avez rien d&apos;autre à faire pour
-              l&apos;instant.
-            </p>
-            <p className="text-xs text-slate-500 font-serif leading-relaxed">
-              Si une place se libère (annulation d&apos;un JP avant le vôtre), rouvrez ce lien :
-              le bouton de confirmation apparaîtra alors.
+              Merci {nom || ''}. Votre place dans la file est réservée. Le formulaire s&apos;ouvrira
+              quand ce sera votre tour.
             </p>
             {(lookup?.commandes_liste_attente?.length ?? 0) > 0 && (
-              <div className="text-left bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-1.5">
+              <div className="text-left bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-2">
                 {lookup!.commandes_liste_attente!.map((c) => (
-                  <p key={c.commande_id} className="text-xs font-semibold text-amber-800">
-                    {c.produit}
-                    {c.code_jp ? ` (${c.code_jp})` : ''}
-                    {c.quantite ? ` × ${c.quantite}` : ''}
-                  </p>
+                  <div key={c.commande_id} className="text-xs font-semibold text-amber-900">
+                    <p>
+                      {c.produit}
+                      {c.code_jp ? ` (${c.code_jp})` : ''}
+                    </p>
+                    <p className="text-amber-700 font-black mt-0.5">
+                      Position {c.position_file ?? c.ordre_jp ?? '—'}
+                      {c.personnes_devant != null
+                        ? ` — ${c.personnes_devant} personne${c.personnes_devant > 1 ? 's' : ''} devant`
+                        : ''}
+                    </p>
+                  </div>
                 ))}
               </div>
             )}
+            <p className="text-xs text-slate-500 font-serif leading-relaxed">
+              Si la personne devant abandonne ou dépasse le délai, rouvrez ce lien : le formulaire
+              apparaîtra automatiquement.
+            </p>
             <button
               type="button"
               onClick={() => {
@@ -597,8 +642,24 @@ export default function PublicOrderFormPage({ liveId }: PublicOrderFormPageProps
               className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs tracking-wider uppercase rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Vérifier si une place s&apos;est libérée
+              Vérifier mon tour
             </button>
+            {(lookup?.commandes_liste_attente?.length ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const first = lookup!.commandes_liste_attente![0];
+                  handleCancelOne(
+                    first.commande_id,
+                    `${first.produit}${first.code_jp ? ` (${first.code_jp})` : ''}`,
+                  );
+                }}
+                disabled={loading || cancellingId != null}
+                className="w-full py-2.5 text-rose-600 hover:bg-rose-50 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+              >
+                Abandonner ma place
+              </button>
+            )}
           </div>
         )}
 

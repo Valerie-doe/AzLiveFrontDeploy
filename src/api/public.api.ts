@@ -16,14 +16,22 @@ export interface PublicOrderItem {
   stock_actuel?: number | null;
   en_rupture?: boolean;
   en_liste_attente?: boolean;
+  a_son_tour?: boolean;
+  position_file?: number;
+  personnes_devant?: number;
+  ordre_jp?: number;
   infos_completes?: boolean;
   pret_a_confirmer?: boolean;
+  timeout_minutes?: number;
+  turn_started_at?: string | null;
+  turn_expires_at?: string | null;
 }
 
 export interface PublicOrderLookup {
   live: { id: number; titre: string; statut: string };
   vendeur: string;
   found: boolean;
+  jp_turn_timeout_minutes?: number;
   client?: {
     nom: string;
     telephone: string;
@@ -31,9 +39,9 @@ export interface PublicOrderLookup {
     date_livraison?: string;
     heure_livraison?: string;
   };
-  /** JP à compléter ou à confirmer (stock dispo). */
+  /** JP à son tour (formulaire). */
   commandes: PublicOrderItem[];
-  /** JP déjà en file d'attente (infos OK) — ne pas afficher dans le formulaire. */
+  /** JP en file — position uniquement. */
   commandes_liste_attente?: PublicOrderItem[];
 }
 
@@ -44,7 +52,8 @@ export interface PublicOrderSubmitPayload {
   adresse: string;
   date_livraison: string;
   heure_livraison: string;
-  items: { commande_id: number; quantite: number }[];
+  accept_partial?: boolean;
+  items: { commande_id: number; quantite: number; accept_partial?: boolean }[];
 }
 
 export interface PublicOrderSubmitResult {
@@ -54,8 +63,16 @@ export interface PublicOrderSubmitResult {
     status: string;
     complet: boolean;
     en_attente?: boolean;
+    quantite_confirmee?: number;
   }[];
-  erreurs: { commande_id?: number; detail: string; rupture_stock?: boolean }[];
+  erreurs: {
+    commande_id?: number;
+    detail: string;
+    rupture_stock?: boolean;
+    stock_propose?: number;
+    quantite_demandee?: number;
+    pas_encore_tour?: boolean;
+  }[];
 }
 
 export interface PublicOrderCancelResult {

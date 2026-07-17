@@ -9,15 +9,18 @@ import {
   Search, 
   X, 
   HelpCircle, 
-  FolderLock 
+  FolderLock,
+  Settings,
 } from 'lucide-react';
 import { playNotificationSound } from '../../services/sound';
+
+type AppTab = 'dashboard' | 'live_hub' | 'products' | 'clients' | 'collaborators' | 'search' | 'settings';
 
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'dashboard' | 'live_hub' | 'products' | 'clients' | 'collaborators' | 'search';
-  setActiveTab: (tab: 'dashboard' | 'live_hub' | 'products' | 'clients' | 'collaborators' | 'search') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   liveHubBadgeCount: number;
   onShowGuide: () => void;
   onLogout: () => void;
@@ -38,7 +41,8 @@ export default function MobileMenu({
     { id: 'products', label: 'Gestion produits', icon: Tag, badge: 0 },
     { id: 'clients', label: 'Clients', icon: Users, badge: 0 },
     { id: 'collaborators', label: 'Collaborateurs', icon: Briefcase, badge: 0 },
-    { id: 'search', label: 'Recherche globale', icon: Search, badge: 0 }
+    { id: 'search', label: 'Recherche globale', icon: Search, badge: 0 },
+    { id: 'settings', label: 'Paramètres', icon: Settings, badge: 0 },
   ] as const;
 
   return (

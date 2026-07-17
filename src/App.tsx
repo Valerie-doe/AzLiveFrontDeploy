@@ -29,6 +29,7 @@ import ClientsView from './features/clients';
 import CollaboratorsView from './features/collaborators';
 import DashboardView from './features/dashboard';
 import GlobalSearchView from './features/search';
+import SettingsView from './features/settings';
 import { Sidebar, Header, MobileMenu, PromoAlert } from './shared/layouts';
 
 function getAuthRoute(): 'facebook-callback' | 'facebook-pages' | 'tiktok-callback' | 'tiktok-confirm' | null {
@@ -205,6 +206,8 @@ export default function App() {
               )}
 
               {state.activeTab === 'search' && <GlobalSearchView />}
+
+              {state.activeTab === 'settings' && <SettingsView />}
             </motion.div>
           </AnimatePresence>
         </main>
