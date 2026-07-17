@@ -55,3 +55,45 @@ export async function arreterLive(id: string | number): Promise<LiveApiResponse>
   });
   return response.live;
 }
+
+export interface CaptureJpStatus {
+  live_id: number;
+  capture_active: boolean;
+  unique_id: string;
+  manual_capture: boolean;
+  ws_mode: string;
+  queued: boolean;
+  queue_position: number | null;
+  pool: { active: number; max: number; pending: number };
+  ws_rate_limited: boolean;
+  ws_rate_limit_remaining_seconds: number;
+  tiktool_configured: boolean;
+}
+
+export interface CaptureJpActionResult {
+  ok: boolean;
+  detail: string;
+  stopped?: boolean;
+  status: CaptureJpStatus;
+}
+
+export async function fetchCaptureJpStatus(id: string | number): Promise<CaptureJpStatus> {
+  return apiRequest<CaptureJpStatus>(`lives/${id}/capture-jp/`, {
+    method: 'GET',
+    headers: getJsonHeaders(),
+  });
+}
+
+export async function startCaptureJp(id: string | number): Promise<CaptureJpActionResult> {
+  return apiRequest<CaptureJpActionResult>(`lives/${id}/capture-jp/start/`, {
+    method: 'POST',
+    headers: getJsonHeaders(),
+  });
+}
+
+export async function stopCaptureJp(id: string | number): Promise<CaptureJpActionResult> {
+  return apiRequest<CaptureJpActionResult>(`lives/${id}/capture-jp/stop/`, {
+    method: 'POST',
+    headers: getJsonHeaders(),
+  });
+}
